@@ -1,0 +1,21 @@
+# Data and generated output never go to the repo
+data/
+outputs/
+*.csv
+*.parquet
+!tests/fixtures/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Local env / editors
+.env
+.vscode/
+.idea/
+.ipynb_checkpoints/

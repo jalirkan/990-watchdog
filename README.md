@@ -77,7 +77,8 @@ tests/          synthetic-data tests, no network needed
 - **Phase 2 (done):** multi-year trends (`watchdog990 trend`) and
   NTEE sector rate reporting. Sector-aware *thresholds* remain open —
   the summary's sector table is the evidence base.
-- **Phase 3:** IRS e-file XML via `irsx` for governance signals —
-  material diversion checkbox, loans to insiders, board independence,
-  Schedule L related parties.
+- **Phase 3 (started):** e-file XML governance signals — material
+  diversion checkbox, loans to insiders, board independence,
+  Schedule L. Parser + `watchdog990 xml` landed; screening-flag
+  integration waits on validation against a real TEOS batch.
 - **Phase 4:** publish — methodology write-up first, findings second.

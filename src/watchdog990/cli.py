@@ -19,7 +19,7 @@ from pathlib import Path
 import pandas as pd
 
 from watchdog990 import flags, metrics, panel, report, trends
-from watchdog990.ingest import bmf, propublica, soi_extract
+from watchdog990.ingest import bmf, efile_xml, propublica, soi_extract
 from watchdog990.utils import load_settings
 
 log = logging.getLogger("watchdog990")
@@ -234,6 +234,48 @@ def _cmd_trend(args: argparse.Namespace) -> int:
     return _trend_stage_report(settings)
 
 
+def _cmd_xml(args: argparse.Namespace) -> int:
+    """Parse governance signals from local e-file XML (files, dirs,
+    or TEOS monthly zips) into outputs/governance_<label>.csv.
+
+    Prints per-field NA rates: on a real batch, a high NA rate means
+    an ALTERNATES name in ingest/efile_xml.py needs fixing — same
+    drill as the extract schema verification."""
+    settings = load_settings(args.config)
+    df = efile_xml.load(args.path)
+    if df.empty:
+        log.error("No parseable XML under %s", args.path)
+        return 2
+
+    out_dir = Path(settings["output_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = out_dir / f"governance_{args.label}.csv"
+    df.to_csv(csv_path, index=False)
+
+    n = len(df)
+    core = df[df["is_form_990"]]
+    log.info("Parsed %s return(s); %s are Form 990", f"{n:,}", f"{len(core):,}")
+    if not core.empty:
+        log.info(
+            "material_diversion=True: %s | loans_to_insiders=True: %s | "
+            "median board independence: %s | Schedule L present: %s",
+            f"{(core.material_diversion == True).sum():,}",  # noqa: E712
+            f"{(core.loans_to_insiders == True).sum():,}",  # noqa: E712
+            f"{pd.to_numeric(core.board_independence, errors='coerce').median():.2f}",
+            f"{core.schedule_l_present.mean():.1%}",
+        )
+        for col in ("tax_period", "material_diversion", "loans_to_insiders",
+                    "voting_members", "independent_members"):
+            na = core[col].isna().mean()
+            if na > 0.05:
+                log.warning(
+                    "VERIFY: %s is NA on %.1f%% of Form 990 returns — "
+                    "check ALTERNATES in ingest/efile_xml.py", col, na * 100
+                )
+    log.info("Wrote %s", csv_path)
+    return 0
+
+
 def _cmd_org(args: argparse.Namespace) -> int:
     data = propublica.get_organization(args.ein)
     org = data.get("organization", {})
@@ -270,6 +312,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_trend.add_argument("--config", default="config/settings.yaml")
     p_trend.set_defaults(fn=_cmd_trend)
+
+    p_xml = sub.add_parser(
+        "xml", help="Parse governance signals from local e-file XML"
+    )
+    p_xml.add_argument(
+        "--path", required=True,
+        help="XML file, directory of XMLs, or TEOS monthly .zip",
+    )
+    p_xml.add_argument("--label", default="xml", help="Label for output file")
+    p_xml.add_argument("--config", default="config/settings.yaml")
+    p_xml.set_defaults(fn=_cmd_xml)
 
     p_org = sub.add_parser("org", help="Look up one org via ProPublica")
     p_org.add_argument("--ein", required=True)

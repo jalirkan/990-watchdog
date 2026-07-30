@@ -78,9 +78,25 @@ here for spot lookups and enrichment, not bulk pulls. Subject to
 ProPublica's Data Terms of Use; keep the courtesy rate limiting in
 `ingest/propublica.py`.
 
-## Phase 2: IRS Form 990 e-file XML
-The IRS also releases full e-filed returns as XML. That is where the
-governance signals live (material diversion of assets checkbox,
-loans to insiders, independent-board counts, Schedule L related-party
-transactions). Parsing is schema-version pain; evaluate the `irsx`
-library before hand-rolling. Not needed for the MVP.
+## 4. IRS Form 990 e-file XML (phase 3, parser landed 2026-07-30)
+Index: https://www.irs.gov/charities-non-profits/form-990-series-downloads
+
+Full e-filed returns as XML — where the governance signals live
+(material diversion checkbox, loans to insiders, board independence,
+Schedule L). Distribution (verified live 2026-07-30):
+
+- Monthly zips per calendar year, e.g.
+  `https://apps.irs.gov/pub/epostcard/990/xml/2024/2024_TEOS_XML_01A.zip`
+  (large months split into A/B/... parts).
+- **Per-year index CSV** listing every return and which zip carries
+  it, e.g. `https://apps.irs.gov/pub/epostcard/990/xml/2024/index_2024.csv`
+  — use it to find the exact zips covering flagged EINs instead of
+  bulk-downloading a whole year.
+
+`watchdog990 xml --path <dir-or-zip>` parses files or TEOS zips in
+place (no extraction) into `outputs/governance_<label>.csv`. Element
+names in `ingest/efile_xml.py` ALTERNATES marked VERIFY are
+unconfirmed until the first real batch: the command prints per-field
+NA rates as the alarm, same drill as the extract schema. The `irsx`
+library remains worth evaluating if parsing needs grow past these
+four signals; the current hand-rolled parser is deliberately minimal.

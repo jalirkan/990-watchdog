@@ -128,6 +128,15 @@ Added 2026-07-30, both approved as a batch:
   against actual filings. First measurement: 13,458 hits (~3.3% of
   all orgs; ~5% of eligible-by-construction).
 
+## Governance signals (phase 3, parser landed 2026-07-30)
+`watchdog990 xml` parses material diversion, insider loans, board
+independence, and Schedule L presence from e-filed returns into a
+standalone governance CSV. These are deliberately NOT screening
+flags yet: the XML element names carry VERIFY status until validated
+against a real TEOS batch, and a governance checkbox is a stronger
+claim than a ratio — integration into the flag registry will be its
+own proposed, dated methodology change.
+
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the
   XML phase (see docs/data-sources.md).

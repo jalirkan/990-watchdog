@@ -16,7 +16,7 @@ DEFAULTS: dict = {
         "officer_comp_ratio_max": 0.30,
         "program_expense_ratio_min": 0.50,
         "months_net_assets_min": 1.0,
-        "large_contributions_floor": 1_000_000,
+        "large_contributions_floor": 5_000_000,
         # trend rules (phase 2)
         "persistent_deficit_years_min": 4,
         "runway_drop_streak_min": 2,

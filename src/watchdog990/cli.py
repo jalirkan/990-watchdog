@@ -163,6 +163,31 @@ def _trend_stage_report(settings: dict, args: argparse.Namespace) -> int:
     if gov_path and Path(gov_path).exists():
         gov = pd.read_csv(gov_path, dtype={"ein": "string"})
         gov = gov[gov.get("is_form_990", True) == True]  # noqa: E712
+
+        # Expense-breakdown enrichment: strictly period-matched — the
+        # XML return must be the SAME filing as the org's latest panel
+        # row, otherwise ratios from different years would mix.
+        exp_cols = ["program_expenses", "fundraising_expenses", "total_expenses_xml"]
+        if all(c in gov.columns for c in exp_cols):
+            xml_fin = gov[["ein", "tax_period", *exp_cols]].drop_duplicates(
+                subset=["ein", "tax_period"], keep="last"
+            )
+            enriched = latest.drop(
+                columns=[c for c in exp_cols if c in latest.columns]
+            ).merge(xml_fin, on=["ein", "tax_period"], how="inner")
+            te = pd.to_numeric(enriched["total_expenses_xml"], errors="coerce")
+            pe = pd.to_numeric(enriched["program_expenses"], errors="coerce")
+            enriched["program_expense_ratio"] = pe / te.replace(0, pd.NA)
+            exp_hits = flags.xml_expense_flags(enriched, settings["thresholds"])
+            log.info(
+                "Expense enrichment: %s orgs period-matched; "
+                "LOW_PROGRAM_RATIO %s, ZERO_FUNDRAISING_COST %s",
+                f"{len(enriched):,}",
+                (exp_hits.flag_id == "LOW_PROGRAM_RATIO").sum(),
+                (exp_hits.flag_id == "ZERO_FUNDRAISING_COST").sum(),
+            )
+            if not exp_hits.empty:
+                hits = pd.concat([hits, exp_hits], ignore_index=True)
         gov = (
             gov.sort_values("tax_period")
             .groupby("ein", sort=False)

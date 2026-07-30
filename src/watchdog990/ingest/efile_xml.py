@@ -84,6 +84,69 @@ def _find_text(root, names: list[str]) -> str | None:
     return None
 
 
+def _amount(el) -> object:
+    """Child-scoped amount: int or NA."""
+    if el is None or el.text is None:
+        return pd.NA
+    t = el.text.strip()
+    try:
+        return int(float(t))
+    except ValueError:
+        return pd.NA
+
+
+def _expense_breakdown(root) -> dict:
+    """Part IX line 25 (total functional expenses) columns A-D.
+
+    Scoping matters: EVERY Part IX line item carries ProgramServicesAmt
+    etc., so amounts must be read as children of the line-25 group
+    (TotalFunctionalExpensesGrp), never searched document-wide.
+    Verified on TEOS batches 2026-07-30 (see data-sources.md).
+    """
+    grp = root.find(".//{*}TotalFunctionalExpensesGrp")
+    if grp is None:
+        return {
+            "total_expenses_xml": pd.NA,
+            "program_expenses": pd.NA,
+            "mgmt_general_expenses": pd.NA,
+            "fundraising_expenses": pd.NA,
+        }
+    return {
+        "total_expenses_xml": _amount(grp.find("{*}TotalAmt")),
+        "program_expenses": _amount(grp.find("{*}ProgramServicesAmt")),
+        "mgmt_general_expenses": _amount(grp.find("{*}ManagementAndGeneralAmt")),
+        "fundraising_expenses": _amount(grp.find("{*}FundraisingAmt")),
+    }
+
+
+def _contribution_breakdown(root) -> dict:
+    """Part VIII line 1: total contributions (1h), government grants
+    (1e), and related-organization contributions (1d).
+
+    Purpose: rebasing ZERO_FUNDRAISING_COST on PRIVATE contributions
+    (total minus government minus related-org) — 2026-07-30
+    measurement showed 37.9% of $1M+ contribution orgs report zero
+    fundraising cost, because line 1h includes government grants and
+    a grant-funded org genuinely raises nothing. Scoped to the core
+    IRS990 element (Schedule A carries similarly-named support-test
+    elements).
+    """
+    core = root.find(".//{*}IRS990")
+    if core is None:
+        return {
+            "total_contributions_xml": pd.NA,
+            "govt_grants_xml": pd.NA,
+            "related_org_contrib_xml": pd.NA,
+        }
+    return {
+        "total_contributions_xml": _amount(core.find(".//{*}TotalContributionsAmt")),
+        "govt_grants_xml": _amount(core.find(".//{*}GovernmentGrantsAmt")),
+        "related_org_contrib_xml": _amount(
+            core.find(".//{*}RelatedOrganizationsAmt")
+        ),
+    }
+
+
 def parse_return(source) -> dict:
     """Parse one e-filed return (path, bytes, or file-like) into a
     flat governance record. Missing/unmatched fields come back NA."""
@@ -125,6 +188,9 @@ def parse_return(source) -> dict:
         )
     else:
         rec["board_independence"] = pd.NA
+
+    rec.update(_expense_breakdown(root))
+    rec.update(_contribution_breakdown(root))
 
     rec["schedule_l_present"] = root.find(".//{*}IRS990ScheduleL") is not None
     # A record is only a Form 990 governance record if the core 990

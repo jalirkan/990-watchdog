@@ -340,8 +340,12 @@ def test_trend_cli_staged_end_to_end():
             )
             Path("gov.csv").write_text(
                 "ein,tax_period,material_diversion,loans_to_insiders,"
-                "board_independence,schedule_l_present,is_form_990\n"
-                "000000001,202312,True,False,0.5,True,True\n"
+                "board_independence,schedule_l_present,is_form_990,"
+                "program_expenses,fundraising_expenses,total_expenses_xml\n"
+                # org1: matched period, program ratio 0.30 -> fires
+                "000000001,202312,True,False,0.5,True,True,30,0,100\n"
+                # org2: MISMATCHED period (latest is 202312) -> ignored
+                "000000002,202212,False,False,1.0,False,True,10,0,100\n"
             )
             assert cli.main(["trend", "--stage", "panel", "--config", "s.yaml"]) == 0
             assert cli.main(
@@ -357,6 +361,13 @@ def test_trend_cli_staged_end_to_end():
             assert "Governance signals" in summary
             assert "Material diversion of assets reported: 1" in summary
             assert "MATERIAL_DIVERSION" in summary  # promoted to a flag
+            # XML expense enrichment: matched org fires, mismatched doesn't
+            assert "LOW_PROGRAM_RATIO" in summary
+            flags_rows = pd.read_csv(
+                "out/flags_2021-2024_trend.csv", dtype={"ein": "string"}
+            )
+            lpr = flags_rows[flags_rows.flag_id == "LOW_PROGRAM_RATIO"]
+            assert set(lpr.ein) == {"000000001"}
             flags_csv = pd.read_csv(
                 "out/flags_2021-2024_trend.csv", dtype={"ein": "string"}
             )

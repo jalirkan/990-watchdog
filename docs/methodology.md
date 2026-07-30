@@ -149,6 +149,30 @@ flags: a 2% base-rate boolean and a continuous share are better
 review-queue sort keys than binary alarms. Any promotion is its own
 dated proposal.
 
+## Expense-breakdown rules go live via XML (2026-07-30, approved)
+
+The e-filed Part IX carries the functional expense breakdown the
+extracts never did. The trend report now enriches each org whose
+LATEST panel filing has a parsed XML twin — strictly period-matched
+on (EIN, tax period) — and evaluates the two long-dormant rules on
+that subset (currently 167,831 orgs, 41.5% of the panel):
+
+- LOW_PROGRAM_RATIO (< 0.50 of expenses to programs): measured at
+  11.4% of covered orgs / 4.7% of the panel. Kept at 0.50: the left
+  tail is fat rather than clustered at the line (0.33 would still
+  catch 8.8%), no sector dominates the hits, and 0.50 is the
+  established public floor. Median program ratio in the covered
+  population is 0.855.
+- ZERO_FUNDRAISING_COST: the scaffold rule ($1M+ contributions, zero
+  reported fundraising expense) failed contact with data — 37.9% of
+  eligible orgs fire, because line 1h contributions INCLUDE
+  government grants and grant-funded orgs genuinely raise nothing.
+  Interim (approved): floor raised $1M -> $5M (2.4% of covered
+  orgs). Planned rebase, next parse cycle: private contributions
+  (line 1h minus government grants minus related-org support, all
+  now parsed from Part VIII) at a $1M floor — the pattern the rule
+  always meant. The rebase will be measured before it ships.
+
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the
   XML phase (see docs/data-sources.md).

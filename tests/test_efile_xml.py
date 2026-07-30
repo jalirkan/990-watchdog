@@ -29,6 +29,19 @@ CLEAN = f"""<?xml version="1.0" encoding="utf-8"?>
       <IndependentVotingMemberCnt>8</IndependentVotingMemberCnt>
       <MaterialDiversionOrMisuseInd>false</MaterialDiversionOrMisuseInd>
       <LoanOutstandingInd>false</LoanOutstandingInd>
+      <CompensationOfCrntOfcrDirGrp>
+        <TotalAmt>50000</TotalAmt>
+        <ProgramServicesAmt>10000</ProgramServicesAmt>
+      </CompensationOfCrntOfcrDirGrp>
+      <TotalFunctionalExpensesGrp>
+        <TotalAmt>100000</TotalAmt>
+        <ProgramServicesAmt>80000</ProgramServicesAmt>
+        <ManagementAndGeneralAmt>15000</ManagementAndGeneralAmt>
+        <FundraisingAmt>5000</FundraisingAmt>
+      </TotalFunctionalExpensesGrp>
+      <GovernmentGrantsAmt>60000</GovernmentGrantsAmt>
+      <RelatedOrganizationsAmt>10000</RelatedOrganizationsAmt>
+      <TotalContributionsAmt>90000</TotalContributionsAmt>
     </IRS990>
   </ReturnData>
 </Return>
@@ -74,6 +87,32 @@ def test_clean_return_parses():
     assert rec["schedule_l_present"] is False
     assert rec["is_form_990"] is True
     assert rec["schema_version"] == "2023v5.0"
+
+
+def test_expense_breakdown_scoped_to_line25_group():
+    """The decoy line-item group (officer comp, listed FIRST in the
+    fixture) must not leak into the line-25 totals."""
+    rec = efile_xml.parse_return(CLEAN.encode())
+    assert rec["total_expenses_xml"] == 100_000
+    assert rec["program_expenses"] == 80_000  # not the decoy 10,000
+    assert rec["mgmt_general_expenses"] == 15_000
+    assert rec["fundraising_expenses"] == 5_000
+
+
+def test_expense_breakdown_absent_group_yields_na():
+    rec = efile_xml.parse_return(DIRTY.encode())
+    assert pd.isna(rec["program_expenses"])
+    assert pd.isna(rec["fundraising_expenses"])
+
+
+def test_contribution_breakdown_for_private_giving_rebase():
+    rec = efile_xml.parse_return(CLEAN.encode())
+    assert rec["total_contributions_xml"] == 90_000
+    assert rec["govt_grants_xml"] == 60_000
+    assert rec["related_org_contrib_xml"] == 10_000
+    # private = 90k - 60k - 10k = 20k, computable downstream
+    ez = efile_xml.parse_return(EZ.encode())
+    assert pd.isna(ez["total_contributions_xml"])  # no core 990 -> NA
 
 
 def test_dirty_return_checkbox_and_numeric_bools():

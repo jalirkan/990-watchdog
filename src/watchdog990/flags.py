@@ -194,6 +194,34 @@ def governance_flags(gov: pd.DataFrame, panel_eins: set) -> pd.DataFrame:
     return hits.reset_index(drop=True)
 
 
+def xml_expense_flags(enriched: pd.DataFrame, t: dict) -> pd.DataFrame:
+    """LOW_PROGRAM_RATIO and ZERO_FUNDRAISING_COST evaluated on the
+    e-file-XML expense breakdown (Part IX columns B/D) — the fields
+    the SOI extracts never carried.
+
+    `enriched` must be period-matched: one row per org whose latest
+    panel filing (ein, tax_period) has a parsed XML return, with
+    program_expense_ratio computed from the XML's own line 25 and
+    fundraising_expenses from column (D). Reuses the registry rule
+    functions so the thresholds and semantics are identical; the
+    description records the source.
+    """
+    out = []
+    for flag in REGISTRY:
+        if flag.id not in ("LOW_PROGRAM_RATIO", "ZERO_FUNDRAISING_COST"):
+            continue
+        mask = flag.fn(enriched, t).fillna(False)
+        if mask.any():
+            sub = enriched.loc[mask, ["ein"]].copy()
+            sub["flag_id"] = flag.id
+            sub["severity"] = flag.severity
+            sub["description"] = flag.description + " [from e-filed Part IX]"
+            out.append(sub)
+    if not out:
+        return pd.DataFrame(columns=["ein", "flag_id", "severity", "description"])
+    return pd.concat(out, ignore_index=True)
+
+
 def sector_outliers(df: pd.DataFrame, t: dict) -> pd.DataFrame:
     """Sector-RELATIVE screen: officer comp ratio above the
     sector_outlier_pctl quantile of the org's own NTEE major group.

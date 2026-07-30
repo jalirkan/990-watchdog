@@ -34,4 +34,9 @@ def load_settings(path: str | Path = "config/settings.yaml") -> dict:
                 merged[key].update(value)
             else:
                 merged[key] = value
+    # YAML parses an unquoted `2024:` as an int key while CLI labels
+    # are strings; normalize so the lookup can't silently miss.
+    merged["extract_files"] = {
+        str(k): v for k, v in (merged.get("extract_files") or {}).items()
+    }
     return merged

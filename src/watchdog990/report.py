@@ -53,11 +53,14 @@ def write(
             lines.append(f"- `{row.flag_id}` ({row.severity}): {row.orgs:,} organizations")
 
         lines += ["", "## Most-flagged organizations (top 25)"]
+        # NB: the column must not be named "flags" — attribute access
+        # on a pandas row (row.flags) resolves to Series.flags, the
+        # pandas-internal object, silently breaking the output.
         per_org = (
             hits.groupby("ein")
             .agg(
                 n_flags=("flag_id", "nunique"),
-                flags=("flag_id", lambda s: ", ".join(sorted(set(s)))),
+                flag_list=("flag_id", lambda s: ", ".join(sorted(set(s)))),
                 name=("name", "first") if "name" in hits.columns else ("flag_id", "size"),
             )
             .sort_values("n_flags", ascending=False)
@@ -65,8 +68,11 @@ def write(
             .reset_index()
         )
         for _, row in per_org.iterrows():
-            display = row.get("name") if isinstance(row.get("name"), str) else row.ein
-            lines.append(f"- **{display}** (EIN {row.ein}) - {row.n_flags} flags: {row.flags}")
+            display = row.get("name") if isinstance(row.get("name"), str) else row["ein"]
+            lines.append(
+                f"- **{display}** (EIN {row['ein']}) - "
+                f"{row['n_flags']} flags: {row['flag_list']}"
+            )
 
     md_path = out_dir / f"summary_{label}.md"
     md_path.write_text("\n".join(lines) + "\n")

@@ -115,6 +115,46 @@ def test_evaluate_survives_minimal_schema():
     assert hits.empty, f"flags fired on missing data: {set(hits['flag_id'])}"
 
 
+def test_report_lists_flag_ids_per_org():
+    """Regression: a column named 'flags' collides with the pandas
+    Series.flags attribute and the summary printed the internal
+    object instead of the flag IDs."""
+    import tempfile
+    from pathlib import Path
+
+    from watchdog990 import report
+
+    hits = pd.DataFrame(
+        {
+            "ein": ["000000001", "000000001", "000000002"],
+            "flag_id": ["NEGATIVE_NET_ASSETS", "THIN_RUNWAY", "OFFICER_COMP_HEAVY"],
+            "severity": ["high", "low", "medium"],
+            "description": ["d1", "d2", "d3"],
+        }
+    )
+    with tempfile.TemporaryDirectory() as d:
+        _, md = report.write(hits, d, "t")
+        text = Path(md).read_text()
+    assert "NEGATIVE_NET_ASSETS, THIN_RUNWAY" in text
+    assert "<Flags(" not in text
+    assert report.DISCLAIMER.splitlines()[0] in text
+
+
+def test_settings_extract_file_keys_are_strings():
+    """Unquoted YAML year keys parse as ints; load_settings must
+    normalize them so `--label 2024` finds the file."""
+    import tempfile
+    from pathlib import Path
+
+    from watchdog990.utils import load_settings
+
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "s.yaml"
+        p.write_text("extract_files:\n  2024: data/raw/x.csv\n")
+        s = load_settings(p)
+    assert s["extract_files"].get("2024") == "data/raw/x.csv"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

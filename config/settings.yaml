@@ -16,8 +16,9 @@ sources:
 # Example:
 #   extract_files:
 #     2023: data/raw/23eoextract990.csv
-extract_files: {}
-bmf_files: []          # e.g. [data/raw/eo1.csv, data/raw/eo2.csv]
+extract_files:
+  "2024": data/raw/24eoextract990.csv
+bmf_files: [data/raw/eo_ny.csv, data/raw/eo_ca.csv]
 
 # Screening thresholds -- judgment calls, documented in docs/methodology.md.
 # Tune them openly; a watchdog's credibility lives in its transparency.

@@ -115,7 +115,17 @@ def _trend_stage_panel(settings: dict, labels: list[str]) -> int:
 
 
 def _read_ckpt(name: str) -> pd.DataFrame:
-    return pd.read_csv(_ckpt(name), dtype={"ein": "string"})
+    # Code-like columns must survive the CSV round-trip as strings —
+    # NaN-bearing "03" columns otherwise come back as float 3.0.
+    return pd.read_csv(
+        _ckpt(name),
+        dtype={
+            "ein": "string",
+            "subsection": "string",
+            "ntee_cd": "string",
+            "ntee_major": "string",
+        },
+    )
 
 
 def _trend_stage_names(settings: dict, args: argparse.Namespace) -> int:
@@ -150,21 +160,29 @@ def _trend_stage_report(settings: dict) -> int:
 
     names = None
     sector_table = None
+    subsection_table = None
     names_path = _ckpt("trend_names.csv")
     if names_path.exists():
         names = _read_ckpt("trend_names.csv").drop_duplicates(
             subset="ein", keep="last"
         )
-        if "ntee_major" in names.columns:
+        join_cols = [
+            c for c in ("ntee_major", "subsection") if c in names.columns
+        ]
+        if join_cols:
             pop = latest[["ein"]].merge(
-                names[["ein", "ntee_major"]], on="ein", how="left"
+                names[["ein", *join_cols]], on="ein", how="left"
             )
-            sector_table = report.sector_rates(pop, set(hits["ein"]))
+            flagged = set(hits["ein"])
+            if "ntee_major" in join_cols:
+                sector_table = report.sector_rates(pop, flagged)
+            if "subsection" in join_cols:
+                subsection_table = report.subsection_rates(pop, flagged)
 
     label = f"{labels[0]}-{labels[-1]}_trend"
     csv_path, md_path = report.write(
         hits, settings["output_dir"], label, names=names,
-        sector_table=sector_table,
+        sector_table=sector_table, subsection_table=subsection_table,
     )
     log.info("Wrote %s and %s", csv_path, md_path)
     return 0

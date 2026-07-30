@@ -39,27 +39,78 @@ NTEE_MAJOR_NAMES = {
 }
 
 
-def sector_rates(population: pd.DataFrame, flagged_eins: set) -> pd.DataFrame:
-    """Flag rate per NTEE major group.
+# IRS EO BMF subsection codes -> 501(c)(n) labels (common ones; rare
+# codes render as the raw code).
+SUBSECTION_NAMES = {
+    "01": "501(c)(1) federal instrumentality",
+    "02": "501(c)(2) title-holding",
+    "03": "501(c)(3) charitable/educational/religious",
+    "04": "501(c)(4) social welfare",
+    "05": "501(c)(5) labor/agricultural",
+    "06": "501(c)(6) business league",
+    "07": "501(c)(7) social club",
+    "08": "501(c)(8) fraternal beneficiary",
+    "09": "501(c)(9) employee beneficiary (VEBA)",
+    "10": "501(c)(10) domestic fraternal",
+    "12": "501(c)(12) benevolent life / mutual utility",
+    "13": "501(c)(13) cemetery",
+    "14": "501(c)(14) credit union",
+    "15": "501(c)(15) mutual insurance",
+    "19": "501(c)(19) veterans",
+    "25": "501(c)(25) title-holding, multi-parent",
+}
 
-    population: one row per org with `ein` and `ntee_major` (NA where
-    the BMF had no usable code). Reporting only — sectors have
-    structurally different ratios, and this table is how we SEE that
-    before proposing any sector-aware thresholds.
-    """
-    pop = population[["ein", "ntee_major"]].copy()
+
+def group_rates(
+    population: pd.DataFrame,
+    flagged_eins: set,
+    col: str,
+    name_map: dict[str, str],
+    na_label: str,
+) -> pd.DataFrame:
+    """Flag rate per group of `col`. Reporting only — group
+    differences are context for future methodology proposals, never
+    silent threshold changes."""
+    pop = population[["ein", col]].copy()
     pop["flagged"] = pop["ein"].isin(flagged_eins)
-    pop["ntee_major"] = pop["ntee_major"].fillna("(no NTEE)")
+    pop[col] = pop[col].fillna(na_label)
     out = (
-        pop.groupby("ntee_major")
+        pop.groupby(col)
         .agg(n_orgs=("ein", "size"), n_flagged=("flagged", "sum"))
         .reset_index()
     )
     out["rate"] = out["n_flagged"] / out["n_orgs"]
-    out["sector"] = out["ntee_major"].map(
-        lambda m: NTEE_MAJOR_NAMES.get(m, m)
-    )
+    out["group"] = out[col].map(lambda m: name_map.get(m, m))
     return out.sort_values("rate", ascending=False).reset_index(drop=True)
+
+
+def sector_rates(population: pd.DataFrame, flagged_eins: set) -> pd.DataFrame:
+    """Flag rate per NTEE major group (see group_rates)."""
+    out = group_rates(
+        population, flagged_eins, "ntee_major", NTEE_MAJOR_NAMES, "(no NTEE)"
+    )
+    # backwards-compatible column name used by the summary/tests
+    out["sector"] = out["group"]
+    return out
+
+
+def subsection_rates(population: pd.DataFrame, flagged_eins: set) -> pd.DataFrame:
+    """Flag rate per 501(c) subsection. The review queue reads very
+    differently for charities vs unions vs business leagues; this
+    table keeps that visible."""
+    pop = population[["ein", "subsection"]].copy()
+    # Accept "03", "3", 3, and float-contaminated "3.0" (a NaN-bearing
+    # code column read back from CSV without dtype comes in as float).
+    pop["subsection"] = (
+        pop["subsection"]
+        .astype("string")
+        .str.strip()
+        .str.replace(r"\.0$", "", regex=True)
+        .str.zfill(2)
+    )
+    return group_rates(
+        pop, flagged_eins, "subsection", SUBSECTION_NAMES, "(no subsection)"
+    )
 
 
 def write(
@@ -68,6 +119,7 @@ def write(
     label: str,
     names: pd.DataFrame | None = None,
     sector_table: pd.DataFrame | None = None,
+    subsection_table: pd.DataFrame | None = None,
 ) -> tuple[Path, Path]:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -129,6 +181,25 @@ def write(
         for _, r in sector_table.iterrows():
             lines.append(
                 f"| {r['sector']} | {r['n_orgs']:,} | {r['n_flagged']:,} "
+                f"| {r['rate']:.1%} |"
+            )
+
+    if subsection_table is not None and not subsection_table.empty:
+        lines += [
+            "",
+            "## Flag rate by 501(c) subsection",
+            "",
+            "Unions, business leagues, and social clubs are built "
+            "differently from charities (officers often ARE the staff; "
+            "reserves run thin by design). Read charity findings from "
+            "the (c)(3) row, not the blended totals.",
+            "",
+            "| Subsection | Orgs | Flagged | Rate |",
+            "|---|---:|---:|---:|",
+        ]
+        for _, r in subsection_table.iterrows():
+            lines.append(
+                f"| {r['group']} | {r['n_orgs']:,} | {r['n_flagged']:,} "
                 f"| {r['rate']:.1%} |"
             )
 

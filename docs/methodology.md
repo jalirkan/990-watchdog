@@ -91,6 +91,12 @@ group (from the EO BMF). Reporting only, for now — sector-aware
 thresholds are a methodology change that will be proposed from that
 table's evidence, not assumed.
 
+501(c) subsection (added 2026-07-29): the trend summary also reports
+flag rates per subsection. Unions, business leagues, and social clubs
+are structurally unlike charities (officer-heavy comp and thin
+reserves by design), so charity-focused review should read from the
+(c)(3) row. Reporting only, same rule as sectors.
+
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the
   XML phase (see docs/data-sources.md).

@@ -200,6 +200,32 @@ def test_bmf_ntee_major_and_sector_rates():
     assert no_ntee.n_orgs == 2 and no_ntee.n_flagged == 0
 
 
+def test_subsection_rates_normalizes_codes():
+    pop = pd.DataFrame(
+        {
+            "ein": ["000000030", "000000031", "000000032"],
+            "subsection": ["3", "03", None],  # unpadded + padded + missing
+        }
+    )
+    table = report.subsection_rates(pop, flagged_eins={"000000030"})
+    c3 = table[table.group.str.startswith("501(c)(3)")].iloc[0]
+    assert c3.n_orgs == 2 and c3.n_flagged == 1  # "3" and "03" merged
+    assert "(no subsection)" in set(table.group)
+
+
+def test_subsection_rates_survives_float_contamination():
+    """Regression: a NaN-bearing code column re-read from a CSV
+    checkpoint arrives as float64 ("03" -> 3.0) and must still map."""
+    pop = pd.DataFrame(
+        {
+            "ein": ["000000033", "000000034"],
+            "subsection": [3.0, None],
+        }
+    )
+    table = report.subsection_rates(pop, flagged_eins=set())
+    assert any(table.group.str.startswith("501(c)(3)"))
+
+
 def test_bmf_keep_eins_filters_at_load():
     import tempfile
     from pathlib import Path
@@ -271,6 +297,7 @@ def test_trend_cli_staged_end_to_end():
             assert "SLIDING ORG" in summary
             assert "FINE ORG" not in summary  # healthy org stays clean
             assert "NTEE" in summary
+            assert "501(c)(3) charitable" in summary  # subsection table
 
             hits = pd.read_csv("data/interim/trend_hits.csv", dtype={"ein": "string"})
             assert set(hits.ein) == {"000000001"}  # zfill survived

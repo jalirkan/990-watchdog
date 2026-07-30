@@ -86,6 +86,9 @@ tests/          synthetic-data tests, no network needed
 - **Phase 4 (done):** methodology write-up first, findings companion
   second (`docs/methodology-writeup.md`, `docs/findings-writeup.md`).
   Annual refresh cycle: `docs/refresh-runbook.md`.
+- **Phase 5 (current):** AI-assisted review of the diversion cohort —
+  the model proposes, a human disposes, and only the human column can
+  publish. Protocol and controls: `docs/ai-assisted-review.md`.
 
 ## License
 

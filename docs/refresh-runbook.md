@@ -1,0 +1,96 @@
+# Annual Refresh Runbook
+
+How to keep 990 Watchdog current, once a year (or whenever the IRS
+posts new files). Written so that anyone — including you in twelve
+months — can run the cycle without rediscovering it. Each step names
+its check; a refresh without the checks is not a refresh.
+
+## 1. New SOI extract year (when the IRS posts it)
+
+Source: https://www.irs.gov/statistics/soi-tax-stats-annual-extract-of-tax-exempt-organization-financial-data
+
+Download the new year's Form 990 extract zip AND its layout doc
+(`<yy>eofinextractdoc.xlsx`) into `data/raw/`, unzip the extract.
+
+**Verification drill (never skip — this is where the IRS breaks
+things):** compare the layout doc's 990 sheet against the CSV header
+in both directions; confirm every `SOI_990_COLUMN_MAP` source name
+resolves; confirm the physical row count ties to the doc's stated
+count; check for Part IX (B)/(C)/(D) columns (if the IRS ever adds
+the functional breakdown to the extract, update `NOT_IN_EXTRACT` and
+celebrate). Historical quirks to expect: BOM on some years, EIN
+header case drift, stray trailing commas, the e-file indicator
+renamed (`elf` in 2019). If names drifted: fix `schema.py` only, add
+a test pinned to the real names, record the finding in
+`data-sources.md`.
+
+Then add the year under `extract_files` in `config/settings.yaml`
+(quote the key: `"2025":`) and record the files in
+`data-sources.md`.
+
+## 2. Refresh the BMF
+
+Source: https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf
+
+Re-download `eo1.csv`–`eo4.csv` (it's cumulative; the posting date is
+on the page). Note the posting date in `data-sources.md`.
+
+## 3. Re-run the trend screen
+
+```
+watchdog990 trend
+```
+
+(or the staged form on small machines: `--stage panel`, then
+`--stage names --bmf data/raw/eo1.csv data/raw/eo2.csv`, then
+`--stage names --bmf data/raw/eo3.csv data/raw/eo4.csv`, then
+`--stage report --governance <governance csv>`).
+
+**Checks:** panel row count reconciles to the sum of per-year counts
+minus dropped/deduped rows (the log prints each); per-flag rates
+compared against the tuning log's last measurements — drift of a few
+tenths is life, a flag doubling or halving is a finding. If any flag
+fires on a dramatically different share, do not retune silently:
+measure alternatives, write the evidence, propose. The tuning log in
+`methodology.md` shows the format.
+
+## 4. New XML year (governance + expense breakdown)
+
+Source: https://www.irs.gov/charities-non-profits/form-990-series-downloads
+
+Download the new year's `index_<year>.csv`, then run the planner to
+target batches instead of hoarding them:
+
+```
+watchdog990 xml-plan --flags outputs/flags_<label>.csv --index data/raw/index_<year>.csv --label <year>
+```
+
+Download the top-ranked batch zips, then parse each (no unzipping):
+
+```
+watchdog990 xml --path data/raw/<batch>.zip --label <batch>
+```
+
+**Checks:** zero (or near-zero) unparseable files; per-field NA
+rates printed by the command — a jump on any field means the IRS
+renamed an element; fix `ALTERNATES` in `ingest/efile_xml.py`, add
+the old name as a fallback, test, note it. Concatenate the parsed
+CSVs into one governance file, re-run the report stage with
+`--governance`, and regenerate `diversion_review_<year>.csv` for the
+manual review queue.
+
+## 5. Close the loop
+
+- `pytest -q` (or `python tests/test_*.py`) — everything green.
+- Update `data-sources.md` (files, dates, counts) and, if any
+  threshold moved, `methodology.md` with a dated, evidenced entry.
+- Commit in increments with the evidence in the messages. The audit
+  trail is the product as much as the screen is.
+
+## Cadence reference
+
+The IRS posts: SOI extracts annually (usually mid-year for the prior
+processing year); BMF continuously (grab it whenever refreshing);
+XML batches monthly during the year, with the per-year index growing
+as batches land. A twice-a-year XML top-up plus one annual full
+cycle keeps the screen honest.

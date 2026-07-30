@@ -173,6 +173,16 @@ that subset (currently 167,831 orgs, 41.5% of the panel):
   now parsed from Part VIII) at a $1M floor — the pattern the rule
   always meant. The rebase will be measured before it ships.
 
+  Rebase shipped 2026-07-30, measured first on the full 2024 XML
+  base: private-basis $1M fires on 3.3% of the with-breakdown
+  population (4,322 orgs on the panel at full coverage, 1.3% of
+  period-matched). The rule now prefers the private basis wherever
+  the breakdown exists and falls back to total-basis $5M elsewhere.
+  Honest caveat, kept in the rule text: about one in four orgs with
+  $1M+ private support reports zero fundraising cost — bequests and
+  single major gifts are common — so severity remains medium and
+  every hit is a question, not an answer.
+
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the
   XML phase (see docs/data-sources.md).

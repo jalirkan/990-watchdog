@@ -23,6 +23,7 @@ THRESHOLDS = {
     "program_expense_ratio_min": 0.50,
     "months_net_assets_min": 1.0,
     "large_contributions_floor": 1_000_000,
+    "large_private_contributions_floor": 1_000_000,
     "persistent_deficit_years_min": 3,
     "runway_drop_streak_min": 2,
     "runway_deteriorating_latest_max": 6.0,
@@ -92,6 +93,23 @@ def test_not_in_extract_fields_stay_na_and_never_flag():
     assert "ZERO_FUNDRAISING_COST" not in set(hits["flag_id"]), (
         "flag fired on a dataset that never carried fundraising_expenses"
     )
+
+
+def test_zero_fundraising_prefers_private_basis():
+    """Org with $10M total contributions but only $0.5M private (the
+    rest is government grants): fires on the TOTAL basis, must NOT
+    fire once the private basis is available."""
+    base = {
+        "ein": ["000000090"],
+        "total_contributions": [10_000_000],
+        "fundraising_expenses": [0],
+    }
+    t = dict(THRESHOLDS, large_contributions_floor=5_000_000)
+    hits = flags.evaluate(pd.DataFrame(base), t)
+    assert "ZERO_FUNDRAISING_COST" in set(hits.flag_id)  # fallback basis fires
+    with_private = pd.DataFrame({**base, "private_contributions": [500_000]})
+    hits2 = flags.evaluate(with_private, t)
+    assert "ZERO_FUNDRAISING_COST" not in set(hits2.flag_id)  # private basis governs
 
 
 def test_zero_fundraising_semantics_kept_when_column_present():

@@ -66,14 +66,25 @@ def _zero_fundraising_cost(df: pd.DataFrame, t: dict) -> pd.Series:
     reported zero (that IS the pattern). A dataset that never carried
     the column at all (e.g. the SOI extract lacks Part IX-25(D)) must
     never fire this rule.
+
+    Basis (rebased 2026-07-30): PRIVATE contributions when available
+    (line 1h minus government grants minus related-org support, from
+    e-file XML) at large_private_contributions_floor — measured at
+    3.3% of the with-breakdown population. Falls back to total
+    contributions at the higher large_contributions_floor where the
+    breakdown is absent, because line 1h includes government grants
+    and grant-funded orgs genuinely raise nothing.
     """
     if "fundraising_expenses" not in df.columns:
         return pd.Series(False, index=df.index)
-    contributions = _num(df, "total_contributions")
+    if "private_contributions" in df.columns:
+        basis = _num(df, "private_contributions")
+        floor = t["large_private_contributions_floor"]
+    else:
+        basis = _num(df, "total_contributions")
+        floor = t["large_contributions_floor"]
     fundraising = _num(df, "fundraising_expenses").fillna(0)
-    return (contributions >= t["large_contributions_floor"]) & (
-        fundraising == 0
-    )
+    return (basis >= floor) & (fundraising == 0)
 
 
 def _thin_runway(df: pd.DataFrame, t: dict) -> pd.Series:

@@ -108,10 +108,16 @@ diversion admission tied to its real filing via ProPublica (EIN
 943292800, FY 2023-09). `index_2024.csv` (also in data/raw/) maps
 every 2024 return to its batch zip for targeted downloads.
 
-**Batches on hand (2026-07-30):** 01A (105 MB), 05A (977 MB), 11A
-(1.17 GB) — 360,115 returns parsed total, zero unparseable, 182,601
-Form 990s. Governance coverage of the six-year flagged population:
-41.8%.
+**Batches on hand (2026-07-30): ALL TWELVE 2024 monthly batches** —
+728,716 records parsed (matches the index's 728,719 minus 3
+duplicate diversion rows superseded during the Schedule O patch),
+zero unparseable files, 363,097 Form 990s. 327 material-diversion
+admissions, each carrying its Schedule O explanation
+(outputs/diversion_review_2024.csv is the review workpaper).
+Expense-breakdown coverage: 79.8% of the panel period-matched;
+governance context on 83.0% of flagged orgs. index_2025.csv on hand;
+outputs/xml_plan_2025.csv ranks 2025 batches for the next round
+(top: 11A/11D/11C/04A).
 
 Targeted acquisition workflow:
 1. `watchdog990 xml-plan --flags outputs/flags_<label>.csv --index

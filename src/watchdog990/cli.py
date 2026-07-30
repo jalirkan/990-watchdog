@@ -178,6 +178,23 @@ def _trend_stage_report(settings: dict, args: argparse.Namespace) -> int:
             te = pd.to_numeric(enriched["total_expenses_xml"], errors="coerce")
             pe = pd.to_numeric(enriched["program_expenses"], errors="coerce")
             enriched["program_expense_ratio"] = pe / te.replace(0, pd.NA)
+            # Private contributions for the rebased zero-fundraising
+            # rule (NA when the breakdown wasn't parsed for this row).
+            if "total_contributions_xml" in gov.columns:
+                cb = gov[["ein", "tax_period", "total_contributions_xml",
+                          "govt_grants_xml", "related_org_contrib_xml"]
+                         ].drop_duplicates(["ein", "tax_period"], keep="last")
+                enriched = enriched.merge(cb, on=["ein", "tax_period"], how="left")
+                tc = pd.to_numeric(
+                    enriched["total_contributions_xml"], errors="coerce"
+                )
+                gg = pd.to_numeric(
+                    enriched["govt_grants_xml"], errors="coerce"
+                ).fillna(0)
+                ro = pd.to_numeric(
+                    enriched["related_org_contrib_xml"], errors="coerce"
+                ).fillna(0)
+                enriched["private_contributions"] = tc - gg - ro
             exp_hits = flags.xml_expense_flags(enriched, settings["thresholds"])
             log.info(
                 "Expense enrichment: %s orgs period-matched; "

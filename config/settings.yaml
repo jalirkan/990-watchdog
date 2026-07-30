@@ -33,9 +33,9 @@ thresholds:
   officer_comp_ratio_max: 0.30        # officer comp / total expenses
   program_expense_ratio_min: 0.50     # program expenses / total expenses
   months_net_assets_min: 1.0          # net assets / (expenses/12)
-  large_contributions_floor: 5000000  # for the zero-fundraising-cost flag
-                                      # (1M -> 5M interim on 2026-07-30; rule to be
-                                      # rebased on PRIVATE contributions; see methodology)
+  large_contributions_floor: 5000000  # zero-fundraising fallback basis (total contribs)
+  large_private_contributions_floor: 1000000  # preferred basis: PRIVATE contributions
+                                      # (rebased 2026-07-30; see methodology)
   # Trend rules (phase 2) -- rationale in docs/methodology.md
   persistent_deficit_years_min: 4     # consecutive deficit filings
                                       # (3 -> 4 on 2026-07-30; see methodology)

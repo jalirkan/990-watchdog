@@ -58,17 +58,24 @@ This distinction is implemented in flags.py and tested.
 
 Trend rules (added 2026-07-29, phase 2):
 - PERSISTENT_DEFICITS (medium): expenses exceeded revenue in
-  persistent_deficit_years_min (default 3) consecutive filings. One
-  deficit year is noise; three is a pattern. Innocent explanations
-  include planned endowment spend-down and multi-year capital
-  projects — which is why this is medium, not high.
+  persistent_deficit_years_min (default 4) consecutive filings.
+  Innocent explanations include planned endowment spend-down and
+  multi-year capital projects — which is why this is medium, not
+  high.
 
-  Base-rate note 2026-07-29 (PY2022-2024 panel): fires on 7.1% of all
-  orgs / 9.5% of orgs with 3+ filings. Elevated, and deliberately
-  left alone: the trailing window is 2020-2023 fiscal years, a
-  genuinely hard stretch for the sector, so the elevated rate is
-  era signal rather than mistuning. Revisit (e.g. 4+ consecutive)
-  when more processing years make longer streaks observable.
+  Tuning log. 2026-07-29 (3-year panel): kept at 3 with an era note —
+  the elevated 7.1% base rate read as 2020-2023 signal, with a
+  revisit promised once longer streaks became observable.
+  2026-07-30 (6-year panel, PY2019-2024, 404,005 orgs, median 6
+  filings/org): raised 3 -> 4. At 3 the flag hit 8.0% of all orgs
+  (largest in the report) and a 3-streak can sit entirely inside
+  2020-2023, making the rule substantially an era detector. At 4 a
+  streak must extend beyond that stretch: 4.77% of all orgs (6.35%
+  of orgs with 4+ filings), in line with the other flags. Cost,
+  accepted: orgs with under 4 observed filings cannot fire this rule
+  (75% of orgs have 4+); point-in-time rules cover short histories.
+  Observed but not acted on: 2.2% of orgs ran deficits in every
+  observable year — candidate for a future "chronic" severity tier.
 - DETERIORATING_RUNWAY (medium): months_net_assets fell in
   runway_drop_streak_min (default 2) consecutive filings AND ended
   below runway_deteriorating_latest_max (default 3 months). Both legs

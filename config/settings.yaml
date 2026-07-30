@@ -35,7 +35,8 @@ thresholds:
   months_net_assets_min: 1.0          # net assets / (expenses/12)
   large_contributions_floor: 1000000  # for the zero-fundraising-cost flag
   # Trend rules (phase 2) -- rationale in docs/methodology.md
-  persistent_deficit_years_min: 3     # consecutive deficit filings
+  persistent_deficit_years_min: 4     # consecutive deficit filings
+                                      # (3 -> 4 on 2026-07-30; see methodology)
   runway_drop_streak_min: 2           # consecutive falls in months_net_assets
   runway_deteriorating_latest_max: 3.0  # ...ending below this many months
                                         # (6.0 -> 3.0 on 2026-07-29; see methodology)

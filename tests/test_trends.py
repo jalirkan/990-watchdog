@@ -258,9 +258,10 @@ def test_trend_cli_staged_end_to_end():
         "compnsatncurrofcr,othrsalwages,lessdirfndrsng,totassetsend,"
         "totliabend,totnetassetend\n"
     )
-    # org 1: three deficit years, runway 12 -> 6 -> 2.4 months
-    # org 2: healthy
+    # org 1: FOUR deficit years (matches the >=4 default), runway
+    # 24 -> 12 -> 6 -> 2.4 months. org 2: healthy.
     years = {
+        "2021": ["1,202012,90,10,80,100,0,0,0,250,50,200", "2,202012,120,0,120,100,0,0,0,300,100,90"],
         "2022": ["1,202112,90,10,80,100,0,0,0,150,50,100", "2,202112,120,0,120,100,0,0,0,300,100,100"],
         "2023": ["1,202212,90,10,80,100,0,0,0,110,60,50", "2,202212,120,0,120,100,0,0,0,300,100,110"],
         "2024": ["1,202312,90,10,80,100,0,0,0,90,70,20", "2,202312,120,0,120,100,0,0,0,300,100,120"],
@@ -279,6 +280,7 @@ def test_trend_cli_staged_end_to_end():
             )
             Path("s.yaml").write_text(
                 "extract_files:\n"
+                '  "2021": data/raw/2021.csv\n'
                 '  "2022": data/raw/2022.csv\n'
                 '  "2023": data/raw/2023.csv\n'
                 '  "2024": data/raw/2024.csv\n'
@@ -291,7 +293,7 @@ def test_trend_cli_staged_end_to_end():
             ) == 0
             assert cli.main(["trend", "--stage", "report", "--config", "s.yaml"]) == 0
 
-            summary = Path("out/summary_2022-2024_trend.md").read_text()
+            summary = Path("out/summary_2021-2024_trend.md").read_text()
             assert "PERSISTENT_DEFICITS" in summary
             assert "DETERIORATING_RUNWAY" in summary
             assert "SLIDING ORG" in summary

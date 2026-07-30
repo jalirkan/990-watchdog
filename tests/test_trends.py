@@ -338,14 +338,28 @@ def test_trend_cli_staged_end_to_end():
                 '  "2024": data/raw/2024.csv\n'
                 "output_dir: out\n"
             )
+            Path("gov.csv").write_text(
+                "ein,tax_period,material_diversion,loans_to_insiders,"
+                "board_independence,schedule_l_present,is_form_990\n"
+                "000000001,202312,True,False,0.5,True,True\n"
+            )
             assert cli.main(["trend", "--stage", "panel", "--config", "s.yaml"]) == 0
             assert cli.main(
                 ["trend", "--stage", "names", "--config", "s.yaml",
                  "--bmf", "data/raw/bmf.csv"]
             ) == 0
-            assert cli.main(["trend", "--stage", "report", "--config", "s.yaml"]) == 0
+            assert cli.main(
+                ["trend", "--stage", "report", "--config", "s.yaml",
+                 "--governance", "gov.csv"]
+            ) == 0
 
             summary = Path("out/summary_2021-2024_trend.md").read_text()
+            assert "Governance signals" in summary
+            assert "Material diversion of assets reported: 1" in summary
+            flags_csv = pd.read_csv(
+                "out/flags_2021-2024_trend.csv", dtype={"ein": "string"}
+            )
+            assert "material_diversion" in flags_csv.columns
             assert "PERSISTENT_DEFICITS" in summary
             assert "DETERIORATING_RUNWAY" in summary
             assert "SLIDING ORG" in summary

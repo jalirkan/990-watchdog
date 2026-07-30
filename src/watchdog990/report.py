@@ -120,6 +120,7 @@ def write(
     names: pd.DataFrame | None = None,
     sector_table: pd.DataFrame | None = None,
     subsection_table: pd.DataFrame | None = None,
+    gov_stats: dict | None = None,
 ) -> tuple[Path, Path]:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -202,6 +203,26 @@ def write(
                 f"| {r['group']} | {r['n_orgs']:,} | {r['n_flagged']:,} "
                 f"| {r['rate']:.1%} |"
             )
+
+    if gov_stats:
+        cov, tot = gov_stats["flagged_covered"], gov_stats["flagged_total"]
+        lines += [
+            "",
+            "## Governance signals (flagged orgs with e-file XML coverage)",
+            "",
+            "Self-reported answers from the full e-filed return, joined "
+            "onto flagged orgs where their XML has been parsed. A checked "
+            "box is an admission on a signed return — and still only a "
+            "reason to look closer, not a finding.",
+            "",
+            f"- Coverage: {cov:,} of {tot:,} flagged orgs "
+            f"({cov / tot:.1%}) have parsed governance data",
+            f"- Material diversion of assets reported: {gov_stats['diversion']:,}",
+            f"- Loans to/from interested persons: {gov_stats['insider_loans']:,}",
+            f"- Median board independence: {gov_stats['median_independence']:.0%}",
+            f"- Schedule L (interested-person transactions) filed: "
+            f"{gov_stats['schedule_l']:,}",
+        ]
 
     md_path = out_dir / f"summary_{label}.md"
     md_path.write_text("\n".join(lines) + "\n")

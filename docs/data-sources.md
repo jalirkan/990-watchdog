@@ -107,3 +107,13 @@ files. Batch stats: material diversion 0.06% of 990s, insider loans
 diversion admission tied to its real filing via ProPublica (EIN
 943292800, FY 2023-09). `index_2024.csv` (also in data/raw/) maps
 every 2024 return to its batch zip for targeted downloads.
+
+Targeted acquisition workflow:
+1. `watchdog990 xml-plan --flags outputs/flags_<label>.csv --index
+   data/raw/index_<year>.csv` ranks batch zips by flagged-org
+   coverage (2024 result: 82.1% of flagged orgs have a 2024 e-filed
+   return; batches 11A + 05A alone cover ~39k of 74k).
+2. Download the top batches, `watchdog990 xml --path <zip>` each.
+3. `watchdog990 trend --stage report --governance <governance csv>`
+   joins the signals onto flagged orgs (context columns in the flags
+   CSV + a summary section).

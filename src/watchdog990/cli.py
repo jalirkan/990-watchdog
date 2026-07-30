@@ -151,12 +151,51 @@ def _trend_stage_names(settings: dict, args: argparse.Namespace) -> int:
     return 0
 
 
-def _trend_stage_report(settings: dict) -> int:
+def _trend_stage_report(settings: dict, args: argparse.Namespace) -> int:
     """Stage 3: assemble checkpoints into the flags CSV + summary."""
     meta = json.loads(_ckpt("trend_meta.json").read_text())
     labels = meta["labels"]
     latest = _read_ckpt("trend_latest.csv")
     hits = _read_ckpt("trend_hits.csv")
+
+    gov_stats = None
+    gov_path = getattr(args, "governance", None)
+    if gov_path and Path(gov_path).exists():
+        gov = pd.read_csv(gov_path, dtype={"ein": "string"})
+        gov = gov[gov.get("is_form_990", True) == True]  # noqa: E712
+        gov = (
+            gov.sort_values("tax_period")
+            .groupby("ein", sort=False)
+            .tail(1)[
+                [
+                    "ein", "tax_period", "material_diversion",
+                    "loans_to_insiders", "board_independence",
+                    "schedule_l_present",
+                ]
+            ]
+            .rename(columns={"tax_period": "gov_tax_period"})
+        )
+        before_cov = hits["ein"].isin(set(gov["ein"])).sum()
+        hits = hits.merge(gov, on="ein", how="left")
+        flagged_gov = gov[gov["ein"].isin(set(hits["ein"]))]
+        gov_stats = {
+            "flagged_covered": int(flagged_gov["ein"].nunique()),
+            "flagged_total": int(hits["ein"].nunique()),
+            "diversion": int((flagged_gov.material_diversion == True).sum()),  # noqa: E712
+            "insider_loans": int((flagged_gov.loans_to_insiders == True).sum()),  # noqa: E712
+            "median_independence": float(
+                pd.to_numeric(
+                    flagged_gov.board_independence, errors="coerce"
+                ).median()
+            ),
+            "schedule_l": int((flagged_gov.schedule_l_present == True).sum()),  # noqa: E712
+        }
+        log.info(
+            "Governance join: %s of %s flagged orgs covered (%s hit rows)",
+            f"{gov_stats['flagged_covered']:,}",
+            f"{gov_stats['flagged_total']:,}",
+            f"{before_cov:,}",
+        )
 
     names = None
     sector_table = None
@@ -197,6 +236,7 @@ def _trend_stage_report(settings: dict) -> int:
     csv_path, md_path = report.write(
         hits, settings["output_dir"], label, names=names,
         sector_table=sector_table, subsection_table=subsection_table,
+        gov_stats=gov_stats,
     )
     log.info("Wrote %s and %s", csv_path, md_path)
     return 0
@@ -231,7 +271,60 @@ def _cmd_trend(args: argparse.Namespace) -> int:
         rc = _trend_stage_names(settings, args)
         if rc or stage == "names":
             return rc
-    return _trend_stage_report(settings)
+    return _trend_stage_report(settings, args)
+
+
+def _cmd_xml_plan(args: argparse.Namespace) -> int:
+    """Targeted-acquisition planner: which TEOS batch zips cover the
+    flagged orgs' e-filed returns, ranked by coverage.
+
+    Reads the IRS per-year index CSV(s) and a flags CSV; writes
+    outputs/xml_plan_<label>.csv with one row per batch zip. Download
+    the top few batches instead of whole years."""
+    from watchdog990.schema import normalize_ein as _norm
+
+    settings = load_settings(args.config)
+    hits = pd.read_csv(args.flags, dtype={"ein": "string"})
+    eins = set(_norm(hits["ein"]))
+    log.info("Flagged orgs: %s", f"{len(eins):,}")
+
+    frames = []
+    for ix in args.index:
+        df = pd.read_csv(
+            ix,
+            usecols=["EIN", "TAX_PERIOD", "RETURN_TYPE", "XML_BATCH_ID"],
+            dtype="string",
+        )
+        frames.append(df)
+        log.info("Index %s: %s returns", ix, f"{len(df):,}")
+    idx = pd.concat(frames, ignore_index=True)
+    frames.clear()
+    idx["EIN"] = _norm(idx["EIN"])
+
+    m = idx[idx["EIN"].isin(eins)]
+    covered = m["EIN"].nunique()
+    log.info(
+        "Flagged orgs with an e-filed return in these indexes: %s (%.1f%%)",
+        f"{covered:,}", 100 * covered / max(len(eins), 1),
+    )
+
+    plan = (
+        m.groupby("XML_BATCH_ID")
+        .agg(returns=("EIN", "size"), flagged_orgs=("EIN", "nunique"))
+        .sort_values("flagged_orgs", ascending=False)
+        .reset_index()
+    )
+    out_dir = Path(settings["output_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = out_dir / f"xml_plan_{args.label}.csv"
+    plan.to_csv(plan_path, index=False)
+    log.info("Wrote %s", plan_path)
+    for _, r in plan.head(8).iterrows():
+        log.info(
+            "  %s: %s flagged orgs (%s returns)",
+            r["XML_BATCH_ID"], f"{r['flagged_orgs']:,}", f"{r['returns']:,}",
+        )
+    return 0
 
 
 def _cmd_xml(args: argparse.Namespace) -> int:
@@ -310,8 +403,24 @@ def main(argv: list[str] | None = None) -> int:
         "--stage", choices=["panel", "names", "report"],
         help="Run one checkpointed stage (resumable); default: all",
     )
+    p_trend.add_argument(
+        "--governance",
+        help="governance_<label>.csv from `watchdog990 xml` to join "
+        "onto flagged orgs (context columns + summary section)",
+    )
     p_trend.add_argument("--config", default="config/settings.yaml")
     p_trend.set_defaults(fn=_cmd_trend)
+
+    p_plan = sub.add_parser(
+        "xml-plan", help="Rank TEOS batch zips by flagged-org coverage"
+    )
+    p_plan.add_argument("--flags", required=True, help="flags_*.csv from a run")
+    p_plan.add_argument(
+        "--index", nargs="+", required=True, help="IRS index_<year>.csv file(s)"
+    )
+    p_plan.add_argument("--label", default="plan")
+    p_plan.add_argument("--config", default="config/settings.yaml")
+    p_plan.set_defaults(fn=_cmd_xml_plan)
 
     p_xml = sub.add_parser(
         "xml", help="Parse governance signals from local e-file XML"

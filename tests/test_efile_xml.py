@@ -142,6 +142,42 @@ def test_xml_cli_end_to_end():
             os.chdir(cwd)
 
 
+def test_xml_plan_ranks_batches_by_flagged_coverage():
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from watchdog990 import cli
+
+    cwd = os.getcwd()
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            os.chdir(d)
+            Path("flags.csv").write_text(
+                "ein,flag_id\n111000111,THIN_RUNWAY\n222000222,CHRONIC_DEFICITS\n"
+            )
+            Path("index.csv").write_text(
+                "RETURN_ID,FILING_TYPE,EIN,TAX_PERIOD,SUB_DATE,TAXPAYER_NAME,"
+                "RETURN_TYPE,DLN,OBJECT_ID,XML_BATCH_ID\n"
+                "1,EFILE,111000111,202312,2024,A,990,d1,o1,2024_TEOS_XML_02A\n"
+                "2,EFILE,222000222,202306,2024,B,990,d2,o2,2024_TEOS_XML_02A\n"
+                "3,EFILE,999999999,202312,2024,C,990,d3,o3,2024_TEOS_XML_03A\n"
+            )
+            Path("s.yaml").write_text("output_dir: out\n")
+            rc = cli.main(
+                ["xml-plan", "--flags", "flags.csv", "--index", "index.csv",
+                 "--label", "t", "--config", "s.yaml"]
+            )
+            assert rc == 0
+            plan = pd.read_csv("out/xml_plan_t.csv")
+            top = plan.iloc[0]
+            assert top.XML_BATCH_ID == "2024_TEOS_XML_02A"
+            assert top.flagged_orgs == 2
+            assert "2024_TEOS_XML_03A" not in set(plan.XML_BATCH_ID)
+        finally:
+            os.chdir(cwd)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

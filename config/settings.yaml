@@ -17,8 +17,12 @@ sources:
 #   extract_files:
 #     2023: data/raw/23eoextract990.csv
 extract_files:
+  "2022": data/raw/22eoextract990.csv
+  "2023": data/raw/23eoextract990.csv
   "2024": data/raw/24eoextract990.csv
-bmf_files: [data/raw/eo_ny.csv, data/raw/eo_ca.csv]
+# Region files cover the full country (NTEE sectors need that);
+# eo_ny/eo_ca remain on disk but are redundant subsets.
+bmf_files: [data/raw/eo1.csv, data/raw/eo2.csv, data/raw/eo3.csv, data/raw/eo4.csv]
 
 # Screening thresholds -- judgment calls, documented in docs/methodology.md.
 # Tune them openly; a watchdog's credibility lives in its transparency.

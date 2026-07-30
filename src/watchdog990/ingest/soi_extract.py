@@ -30,6 +30,16 @@ def download(url: str, dest: str | Path, timeout: int = 120) -> Path:
 
 
 def load(path: str | Path, canonical: bool = True) -> pd.DataFrame:
-    """Read one extract CSV; optionally rename to canonical schema."""
-    df = pd.read_csv(path, dtype={"EIN": "string", "ein": "string"}, low_memory=False)
+    """Read one extract CSV; optionally rename to canonical schema.
+
+    encoding="utf-8-sig": the PY2022/PY2023 files ship with a UTF-8
+    BOM that would otherwise glue \\ufeff onto the first header name;
+    harmless for BOM-less years.
+    """
+    df = pd.read_csv(
+        path,
+        dtype={"EIN": "string", "ein": "string"},
+        low_memory=False,
+        encoding="utf-8-sig",
+    )
     return to_canonical(df) if canonical else df

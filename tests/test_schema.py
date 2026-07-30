@@ -118,6 +118,25 @@ def test_evaluate_survives_minimal_schema():
     assert hits.empty, f"flags fired on missing data: {set(hits['flag_id'])}"
 
 
+def test_loader_strips_utf8_bom():
+    """PY2022/PY2023 extracts ship with a BOM; the first header must
+    not come back as '\\ufeffefile'."""
+    import tempfile
+    from pathlib import Path
+
+    from watchdog990.ingest import soi_extract
+
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "bom.csv"
+        p.write_bytes(
+            b"\xef\xbb\xbfefile,EIN,tax_pd,totrevenue,totfuncexpns\n"
+            b"E,12-3456789,202212,100,90\n"
+        )
+        df = soi_extract.load(p)
+    assert "efile" in df.columns
+    assert df["ein"].iloc[0] == "123456789"
+
+
 def test_report_lists_flag_ids_per_org():
     """Regression: a column named 'flags' collides with the pandas
     Series.flags attribute and the summary printed the internal

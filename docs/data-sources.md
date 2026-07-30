@@ -37,6 +37,23 @@ A machine-readable copy of the layout doc's 990 sheet is kept at
 `data/interim/990_layout_2024.csv` for grepping (gitignored, regenerate
 from the xlsx).
 
+## Files added — phase 2 (recorded 2026-07-29)
+
+| File | Source URL | Notes |
+|---|---|---|
+| `data/raw/23eoextract990.csv` | https://www.irs.gov/pub/irs-soi/23eoextract990.zip | PY2023 Form 990 extract; layout doc count 338,048 |
+| `data/raw/23eofinextractdoc.xlsx` | https://www.irs.gov/pub/irs-soi/23eofinextractdoc.xlsx | 246/246 elements match CSV both directions |
+| `data/raw/22eoextract990.csv` | https://www.irs.gov/pub/irs-soi/22eoextract990.zip | PY2022 Form 990 extract; layout doc count 326,119 |
+| `data/raw/22eofinextractdoc.xlsx` | https://www.irs.gov/pub/irs-soi/22eofinextractdoc.xlsx | 246/246 elements match CSV both directions |
+| `data/raw/eo1.csv` … `eo4.csv` | https://www.irs.gov/pub/irs-soi/eo1.csv (…eo2, eo3, eo4) | Full-country EO BMF by region, posting dated 2026-07-14; NTEE source |
+
+Cross-year layout finding: PY2022–PY2024 Form 990 extracts share an
+identical 246-element layout (name-for-name), so one column map in
+schema.py serves all three years. Cosmetic drift only: EIN header
+case varies (2022 `EIN`, 2023 `ein`), and the 2022/2023 CSVs carry a
+UTF-8 BOM (loader reads `utf-8-sig`). No year carries the Part IX
+(B)/(C)/(D) functional-expense breakdown.
+
 ## 2. IRS Exempt Organizations Business Master File (EO BMF)
 Index: see `sources.eo_bmf_index` in settings.
 

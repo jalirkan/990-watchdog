@@ -19,6 +19,27 @@ raises the question, the workpaper answers it.
 
 Missing or zero denominators produce NA, and NA never fires a flag.
 
+## Trend metrics (src/watchdog990/trends.py, phase 2)
+Computed on a multi-processing-year panel (src/watchdog990/panel.py),
+one row per (EIN, tax period); the same return appearing in several
+processing-year files is deduplicated with the latest processing year
+winning (amended data supersedes).
+
+- consec_deficit_years: consecutive filings, ending at this one, with
+  surplus_margin < 0. An NA margin breaks the streak — absence of
+  evidence is not evidence of a deficit.
+- runway_drop_streak / runway_change: consecutive filings with falling
+  months_net_assets, and the latest step's change.
+
+"Consecutive" means consecutive *filings* ordered by tax period. An
+org that changes fiscal year end files a short year; we count it as a
+step rather than calendar-normalizing, and accept the small noise.
+
+Trend screening evaluates each org's LATEST filing only (point rules
+on current numbers, trend rules on trailing streaks). This avoids the
+phase-1 rollup confusion where flags from different fiscal years
+unioned into one org line.
+
 A note on the "overhead ratio": low overhead is popularly read as
 virtue, but starving admin/infrastructure often harms effectiveness.
 This project flags *extreme* patterns in both directions and says so,
@@ -34,6 +55,26 @@ on a filed return counts as a reported zero where a rule targets the
 reported value (e.g. ZERO_FUNDRAISING_COST). A field the dataset
 never carried at all is "no data" — rules must never fire on it.
 This distinction is implemented in flags.py and tested.
+
+Trend rules (added 2026-07-29, phase 2):
+- PERSISTENT_DEFICITS (medium): expenses exceeded revenue in
+  persistent_deficit_years_min (default 3) consecutive filings. One
+  deficit year is noise; three is a pattern. Innocent explanations
+  include planned endowment spend-down and multi-year capital
+  projects — which is why this is medium, not high.
+- DETERIORATING_RUNWAY (medium): months_net_assets fell in
+  runway_drop_streak_min (default 2) consecutive filings AND ended
+  below runway_deteriorating_latest_max (default 6 months). Both legs
+  required: a fall from 60 to 40 months is not distress. Defaults are
+  first-pass judgment calls to be revisited against the real hit
+  rates, openly, like the phase-1 thresholds.
+- Trend rules only fire when the trend columns exist (multi-year
+  runs); single-year runs are unaffected.
+
+NTEE sectors: the trend summary reports flag rates per NTEE major
+group (from the EO BMF). Reporting only, for now — sector-aware
+thresholds are a methodology change that will be proposed from that
+table's evidence, not assumed.
 
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the

@@ -17,6 +17,10 @@ DEFAULTS: dict = {
         "program_expense_ratio_min": 0.50,
         "months_net_assets_min": 1.0,
         "large_contributions_floor": 1_000_000,
+        # trend rules (phase 2)
+        "persistent_deficit_years_min": 3,
+        "runway_drop_streak_min": 2,
+        "runway_deteriorating_latest_max": 6.0,
     },
     "output_dir": "outputs",
 }

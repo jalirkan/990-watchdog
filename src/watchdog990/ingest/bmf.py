@@ -30,4 +30,9 @@ def load(paths: Iterable[str | Path]) -> pd.DataFrame:
     out = pd.concat(frames, ignore_index=True)
     out.columns = [c.lower() for c in out.columns]
     out["ein"] = normalize_ein(out["ein"])
+    if "ntee_cd" in out.columns:
+        # First letter of the NTEE code is the major group (A-Z);
+        # anything unparseable stays NA rather than a fake sector.
+        major = out["ntee_cd"].astype("string").str.strip().str.upper().str[0]
+        out["ntee_major"] = major.where(major.str.match(r"[A-Z]", na=False))
     return out.drop_duplicates(subset="ein", keep="last")

@@ -15,7 +15,7 @@ import json
 import logging
 import sys
 
-from watchdog990 import flags, metrics, report
+from watchdog990 import flags, metrics, panel, report, trends
 from watchdog990.ingest import bmf, propublica, soi_extract
 from watchdog990.utils import load_settings
 
@@ -56,6 +56,72 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_trend(args: argparse.Namespace) -> int:
+    """Multi-year screen: point flags on each org's latest filing,
+    trend flags on its trailing streaks."""
+    settings = load_settings(args.config)
+
+    labels = args.labels or sorted(settings["extract_files"])
+    if len(labels) < 2:
+        log.error(
+            "Trend needs >=2 processing years; have %s. Add files to "
+            "extract_files in %s or pass --labels.",
+            labels,
+            args.config,
+        )
+        return 2
+
+    frames = {}
+    for lb in labels:
+        path = settings["extract_files"].get(lb)
+        if not path:
+            log.error("No extract file for label %r in %s", lb, args.config)
+            return 2
+        log.info("Loading extract %s: %s", lb, path)
+        frames[lb] = soi_extract.load(path)
+        log.info("Rows: %s", f"{len(frames[lb]):,}")
+
+    pnl = panel.build_panel(frames)
+    log.info("Panel: %s filings, %s orgs", f"{len(pnl):,}", f"{pnl.ein.nunique():,}")
+    pnl = trends.add_trend_metrics(metrics.compute_all(pnl))
+    latest = panel.latest_per_org(pnl)
+
+    hits = flags.evaluate(latest, settings["thresholds"])
+    log.info("Flag hits (latest filing per org): %s", f"{len(hits):,}")
+
+    # Context columns so the CSV reads like a workpaper.
+    context_cols = [
+        c
+        for c in (
+            "ein", "tax_period", "n_filings", "consec_deficit_years",
+            "runway_drop_streak", "months_net_assets", "surplus_margin",
+            "officer_comp_ratio",
+        )
+        if c in latest.columns
+    ]
+    hits = hits.merge(latest[context_cols], on="ein", how="left")
+
+    names = None
+    sector_table = None
+    bmf_paths = args.bmf or settings.get("bmf_files") or []
+    if bmf_paths:
+        log.info("Loading BMF name table (%d file(s))", len(bmf_paths))
+        names = bmf.load(bmf_paths)
+        if "ntee_major" in names.columns:
+            pop = latest[["ein"]].merge(
+                names[["ein", "ntee_major"]], on="ein", how="left"
+            )
+            sector_table = report.sector_rates(pop, set(hits["ein"]))
+
+    label = f"{labels[0]}-{labels[-1]}_trend"
+    csv_path, md_path = report.write(
+        hits, settings["output_dir"], label, names=names,
+        sector_table=sector_table,
+    )
+    log.info("Wrote %s and %s", csv_path, md_path)
+    return 0
+
+
 def _cmd_org(args: argparse.Namespace) -> int:
     data = propublica.get_organization(args.ein)
     org = data.get("organization", {})
@@ -77,6 +143,17 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--label", default="latest", help="Label for output files")
     p_run.add_argument("--config", default="config/settings.yaml")
     p_run.set_defaults(fn=_cmd_run)
+
+    p_trend = sub.add_parser(
+        "trend", help="Multi-year screen across processing-year extracts"
+    )
+    p_trend.add_argument(
+        "--labels", nargs="*",
+        help="extract_files labels to stack (default: all, ascending)",
+    )
+    p_trend.add_argument("--bmf", nargs="*", help="BMF CSV path(s)")
+    p_trend.add_argument("--config", default="config/settings.yaml")
+    p_trend.set_defaults(fn=_cmd_trend)
 
     p_org = sub.add_parser("org", help="Look up one org via ProPublica")
     p_org.add_argument("--ein", required=True)

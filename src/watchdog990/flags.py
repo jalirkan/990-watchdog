@@ -48,11 +48,11 @@ def _negative_net_assets(df: pd.DataFrame, t: dict) -> pd.Series:
 
 
 def _officer_comp_heavy(df: pd.DataFrame, t: dict) -> pd.Series:
-    return df["officer_comp_ratio"] > t["officer_comp_ratio_max"]
+    return _num(df, "officer_comp_ratio") > t["officer_comp_ratio_max"]
 
 
 def _low_program_ratio(df: pd.DataFrame, t: dict) -> pd.Series:
-    return df["program_expense_ratio"] < t["program_expense_ratio_min"]
+    return _num(df, "program_expense_ratio") < t["program_expense_ratio_min"]
 
 
 def _zero_fundraising_cost(df: pd.DataFrame, t: dict) -> pd.Series:
@@ -77,8 +77,27 @@ def _zero_fundraising_cost(df: pd.DataFrame, t: dict) -> pd.Series:
 
 
 def _thin_runway(df: pd.DataFrame, t: dict) -> pd.Series:
-    return (df["months_net_assets"] < t["months_net_assets_min"]) & (
+    return (_num(df, "months_net_assets") < t["months_net_assets_min"]) & (
         _num(df, "net_assets_eoy") >= 0
+    )
+
+
+def _persistent_deficits(df: pd.DataFrame, t: dict) -> pd.Series:
+    """Trend rule: expenses exceeded revenue in N consecutive filings.
+
+    Only computable on a multi-year panel (trends.add_trend_metrics);
+    on single-year runs the column is absent and the rule never fires.
+    """
+    return _num(df, "consec_deficit_years") >= t["persistent_deficit_years_min"]
+
+
+def _deteriorating_runway(df: pd.DataFrame, t: dict) -> pd.Series:
+    """Trend rule: months-of-spending cushion fell in consecutive
+    filings AND the latest cushion is thin. Both legs required — a
+    fall from 60 to 40 months is not distress."""
+    return (
+        (_num(df, "runway_drop_streak") >= t["runway_drop_streak_min"])
+        & (_num(df, "months_net_assets") < t["runway_deteriorating_latest_max"])
     )
 
 
@@ -112,6 +131,18 @@ REGISTRY: list[Flag] = [
         "low",
         "Net assets cover less than the configured months of spending.",
         _thin_runway,
+    ),
+    Flag(
+        "PERSISTENT_DEFICITS",
+        "medium",
+        "Expenses exceeded revenue in several consecutive filed years.",
+        _persistent_deficits,
+    ),
+    Flag(
+        "DETERIORATING_RUNWAY",
+        "medium",
+        "Months-of-spending cushion fell in consecutive years to a thin level.",
+        _deteriorating_runway,
     ),
 ]
 

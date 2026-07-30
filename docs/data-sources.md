@@ -54,6 +54,15 @@ case varies (2022 `EIN`, 2023 `ein`), and the 2022/2023 CSVs carry a
 UTF-8 BOM (loader reads `utf-8-sig`). No year carries the Part IX
 (B)/(C)/(D) functional-expense breakdown.
 
+## Files added — six-year window (recorded 2026-07-30)
+
+| File | Source URL | Notes |
+|---|---|---|
+| `data/raw/21eoextract990.csv` | https://www.irs.gov/pub/irs-soi/21eoextract990.zip | PY2021; 342,920 rows = doc count exactly |
+| `data/raw/20eoextract990.csv` | https://www.irs.gov/pub/irs-soi/20eoextract990.zip | PY2020; 273,971 rows = doc count exactly; header has stray trailing commas (unnamed cols, unmapped, harmless) |
+| `data/raw/19eoextract990.csv` | https://www.irs.gov/pub/irs-soi/19eoextract990.zip | PY2019; 304,441 rows = doc count exactly; e-file indicator named `elf` (doc agrees; unmapped) |
+| matching `*eofinextractdoc.xlsx` | same index page | each verified 246 elements, all mapped fields present, no Part IX (B)/(C)/(D) any year 2019–2024 |
+
 ## 2. IRS Exempt Organizations Business Master File (EO BMF)
 Index: see `sources.eo_bmf_index` in settings.
 

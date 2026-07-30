@@ -29,6 +29,12 @@ Thresholds live in `config/settings.yaml`, in the open, on purpose.
 Changing them is a methodology change and should be committed with a
 rationale in the message.
 
+Missing-data semantics (clarified 2026-07-29): a field that is blank
+on a filed return counts as a reported zero where a rule targets the
+reported value (e.g. ZERO_FUNDRAISING_COST). A field the dataset
+never carried at all is "no data" — rules must never fire on it.
+This distinction is implemented in flags.py and tested.
+
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the
   XML phase (see docs/data-sources.md).

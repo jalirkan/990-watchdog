@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+import numpy as np
 import pandas as pd
 
 
@@ -29,8 +30,21 @@ class Flag:
     fn: Callable[[pd.DataFrame, dict], pd.Series]
 
 
+def _num(df: pd.DataFrame, name: str) -> pd.Series:
+    """Numeric column, or an all-NA series when the extract lacks it.
+
+    A column the dataset never carried is "no data", not "reported
+    zero" -- rules must degrade to never-fire, mirroring metrics._col.
+    (df.get() on a missing column returns None, and the scalar NaN it
+    coerces to would crash .fillna()/Series ops downstream.)
+    """
+    if name in df.columns:
+        return pd.to_numeric(df[name], errors="coerce")
+    return pd.Series(np.nan, index=df.index)
+
+
 def _negative_net_assets(df: pd.DataFrame, t: dict) -> pd.Series:
-    return pd.to_numeric(df.get("net_assets_eoy"), errors="coerce") < 0
+    return _num(df, "net_assets_eoy") < 0
 
 
 def _officer_comp_heavy(df: pd.DataFrame, t: dict) -> pd.Series:
@@ -47,13 +61,16 @@ def _zero_fundraising_cost(df: pd.DataFrame, t: dict) -> pd.Series:
     A classic understatement pattern: money rarely raises itself.
     Also frequently innocent (all-volunteer boards, single-grant
     funding) — which is exactly why this is a flag, not a finding.
+
+    Blank-but-present fundraising on a filed return counts as a
+    reported zero (that IS the pattern). A dataset that never carried
+    the column at all (e.g. the SOI extract lacks Part IX-25(D)) must
+    never fire this rule.
     """
-    contributions = pd.to_numeric(
-        df.get("total_contributions"), errors="coerce"
-    )
-    fundraising = pd.to_numeric(
-        df.get("fundraising_expenses"), errors="coerce"
-    ).fillna(0)
+    if "fundraising_expenses" not in df.columns:
+        return pd.Series(False, index=df.index)
+    contributions = _num(df, "total_contributions")
+    fundraising = _num(df, "fundraising_expenses").fillna(0)
     return (contributions >= t["large_contributions_floor"]) & (
         fundraising == 0
     )
@@ -61,7 +78,7 @@ def _zero_fundraising_cost(df: pd.DataFrame, t: dict) -> pd.Series:
 
 def _thin_runway(df: pd.DataFrame, t: dict) -> pd.Series:
     return (df["months_net_assets"] < t["months_net_assets_min"]) & (
-        pd.to_numeric(df.get("net_assets_eoy"), errors="coerce") >= 0
+        _num(df, "net_assets_eoy") >= 0
     )
 
 

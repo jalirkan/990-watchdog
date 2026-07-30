@@ -16,6 +16,27 @@ Limitations: selected fields only (the functional expense breakdown
 and governance checkboxes may not be present), IRS processing
 adjustments, transcription noise on paper filings.
 
+**Confirmed for PY2024 (2026-07-29):** the Form 990 extract reports
+Part IX functional expenses as column (A) totals only — no program
+(B) / management (C) / fundraising (D) breakdown. Therefore
+`program_expense_ratio` and `fundraising_efficiency` are NA for every
+org this phase, and `ZERO_FUNDRAISING_COST` cannot fire (by design —
+see `NOT_IN_EXTRACT` in `src/watchdog990/schema.py`). E-file XML
+(phase 3) is the route to those fields.
+
+## Files used — phase 1 go-live (recorded 2026-07-29)
+
+| File | Source URL | Notes |
+|---|---|---|
+| `data/raw/24eoextract990.csv` | https://www.irs.gov/pub/irs-soi/24eoextract990.zip (unzipped) | PY2024 Form 990 extract; 345,365 records — matches layout doc's stated count exactly |
+| `data/raw/24eofinextractdoc.xlsx` | https://www.irs.gov/pub/irs-soi/24eofinextractdoc.xlsx | Official field layout doc used to verify every `schema.py` mapping; sheet "990", 246 elements (246/246 match the CSV header both directions) |
+| `data/raw/eo_ny.csv` | https://www.irs.gov/pub/irs-soi/eo_ny.csv | EO BMF, New York; posting dated 2026-07-14 |
+| `data/raw/eo_ca.csv` | https://www.irs.gov/pub/irs-soi/eo_ca.csv | EO BMF, California; posting dated 2026-07-14 |
+
+A machine-readable copy of the layout doc's 990 sheet is kept at
+`data/interim/990_layout_2024.csv` for grepping (gitignored, regenerate
+from the xlsx).
+
 ## 2. IRS Exempt Organizations Business Master File (EO BMF)
 Index: see `sources.eo_bmf_index` in settings.
 

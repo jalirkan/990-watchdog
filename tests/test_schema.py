@@ -1,0 +1,123 @@
+"""Schema-mapping and flag-degradation tests pinned to the PY2024
+SOI extract layout (24eofinextractdoc.xlsx) — the real column names,
+synthetic values. No downloads, no network.
+
+Run with either:
+    pytest -q
+    python tests/test_schema.py
+"""
+
+from __future__ import annotations
+
+import pandas as pd
+
+from watchdog990 import flags, metrics
+from watchdog990.schema import (
+    NOT_IN_EXTRACT,
+    SOI_990_COLUMN_MAP,
+    to_canonical,
+)
+
+THRESHOLDS = {
+    "officer_comp_ratio_max": 0.30,
+    "program_expense_ratio_min": 0.50,
+    "months_net_assets_min": 1.0,
+    "large_contributions_floor": 1_000_000,
+}
+
+
+def _py2024_style_df() -> pd.DataFrame:
+    """Two rows shaped like the real 2024 extract (verified names,
+    including the uppercase EIN header)."""
+    return pd.DataFrame(
+        {
+            "EIN": ["12-3456789", "987654321"],
+            "tax_pd": [202312, 202306],
+            "totrevenue": [5_000_000, 2_000_000],
+            "totcntrbgfts": [3_000_000, 1_500_000],
+            "totprgmrevnue": [1_800_000, 400_000],
+            "totfuncexpns": [4_500_000, 1_900_000],
+            "compnsatncurrofcr": [300_000, 700_000],
+            "othrsalwages": [2_000_000, 500_000],
+            "lessdirfndrsng": [20_000, 0],
+            "totassetsend": [9_000_000, 800_000],
+            "totliabend": [2_000_000, 1_100_000],
+            "totnetassetend": [7_000_000, -300_000],
+        }
+    )
+
+
+def test_every_mapped_column_resolves_on_2024_layout():
+    df = to_canonical(_py2024_style_df())
+    for canonical in SOI_990_COLUMN_MAP:
+        assert canonical in df.columns, f"unmapped: {canonical}"
+    # EIN normalized through the case-insensitive rename
+    assert df["ein"].tolist() == ["123456789", "987654321"]
+
+
+def test_program_revenue_maps_from_totprgmrevnue():
+    # Regression: the old guess "totprgmrevn" does not exist in 2024.
+    df = to_canonical(_py2024_style_df())
+    assert df["program_revenue"].tolist() == [1_800_000, 400_000]
+
+
+def test_missing_required_field_raises():
+    bad = _py2024_style_df().drop(columns=["totrevenue"])
+    try:
+        to_canonical(bad)
+    except ValueError as e:
+        assert "total_revenue" in str(e)
+    else:
+        raise AssertionError("expected ValueError for missing required field")
+
+
+def test_not_in_extract_fields_stay_na_and_never_flag():
+    """The 2024 extract has no Part IX (B)/(D) breakdown: program and
+    fundraising expense metrics must be NA, and ZERO_FUNDRAISING_COST
+    must never fire on column absence — even with huge contributions."""
+    for field in ("program_expenses", "fundraising_expenses"):
+        assert field in NOT_IN_EXTRACT
+
+    df = metrics.compute_all(to_canonical(_py2024_style_df()))
+    assert df["program_expense_ratio"].isna().all()
+    assert df["fundraising_efficiency"].isna().all()
+
+    hits = flags.evaluate(df, THRESHOLDS)
+    assert "ZERO_FUNDRAISING_COST" not in set(hits["flag_id"]), (
+        "flag fired on a dataset that never carried fundraising_expenses"
+    )
+
+
+def test_zero_fundraising_semantics_kept_when_column_present():
+    """Blank-but-present fundraising on a filed return still counts
+    as a reported zero — the pattern the flag exists to catch."""
+    df = to_canonical(_py2024_style_df())
+    df["fundraising_expenses"] = [None, None]  # present, blank
+    df = metrics.compute_all(df)
+    hits = flags.evaluate(df, THRESHOLDS)
+    zf = hits[hits["flag_id"] == "ZERO_FUNDRAISING_COST"]
+    assert set(zf["ein"]) == {"123456789", "987654321"}
+
+
+def test_evaluate_survives_minimal_schema():
+    """Only the REQUIRED trio present: nothing crashes, no flag fires
+    off missing data."""
+    df = pd.DataFrame(
+        {
+            "ein": ["000000009"],
+            "total_revenue": [2_000_000],
+            "total_expenses": [1_500_000],
+            "total_contributions": [2_000_000],
+        }
+    )
+    df = metrics.compute_all(df)
+    hits = flags.evaluate(df, THRESHOLDS)
+    assert hits.empty, f"flags fired on missing data: {set(hits['flag_id'])}"
+
+
+if __name__ == "__main__":
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
+            print(f"PASS {name}")
+    print("All tests passed.")

@@ -173,6 +173,20 @@ def _trend_stage_report(settings: dict) -> int:
             pop = latest[["ein"]].merge(
                 names[["ein", *join_cols]], on="ein", how="left"
             )
+            if "ntee_major" in join_cols:
+                # Sector-relative screen runs here — the only stage
+                # where the population carries its sector.
+                latest_sect = latest.merge(
+                    names[["ein", "ntee_major"]], on="ein", how="left"
+                )
+                sector_hits = flags.sector_outliers(
+                    latest_sect, settings["thresholds"]
+                )
+                if not sector_hits.empty:
+                    log.info(
+                        "Sector-relative hits: %s", f"{len(sector_hits):,}"
+                    )
+                    hits = pd.concat([hits, sector_hits], ignore_index=True)
             flagged = set(hits["ein"])
             if "ntee_major" in join_cols:
                 sector_table = report.sector_rates(pop, flagged)

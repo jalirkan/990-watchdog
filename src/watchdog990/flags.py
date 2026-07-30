@@ -101,6 +101,18 @@ def _deteriorating_runway(df: pd.DataFrame, t: dict) -> pd.Series:
     )
 
 
+def _chronic_deficits(df: pd.DataFrame, t: dict) -> pd.Series:
+    """Severity tier above PERSISTENT_DEFICITS: a deficit in EVERY
+    observed filing, with at least chronic_deficit_min_years of
+    history. An org that has never once broken even in five-plus
+    observable years is a materially stronger signal than any fixed
+    streak — though planned endowment spend-down remains an innocent
+    explanation, which the manual review checks first."""
+    consec = _num(df, "consec_deficit_years")
+    nf = _num(df, "n_filings")
+    return (nf >= t["chronic_deficit_min_years"]) & (consec >= nf)
+
+
 REGISTRY: list[Flag] = [
     Flag(
         "NEGATIVE_NET_ASSETS",
@@ -144,7 +156,56 @@ REGISTRY: list[Flag] = [
         "Months-of-spending cushion fell in consecutive years to a thin level.",
         _deteriorating_runway,
     ),
+    Flag(
+        "CHRONIC_DEFICITS",
+        "high",
+        "Expenses exceeded revenue in every observed year (5+ years of history).",
+        _chronic_deficits,
+    ),
 ]
+
+
+def sector_outliers(df: pd.DataFrame, t: dict) -> pd.DataFrame:
+    """Sector-RELATIVE screen: officer comp ratio above the
+    sector_outlier_pctl quantile of the org's own NTEE major group.
+
+    Lives outside REGISTRY deliberately: registry rules are row-local
+    (an org's numbers alone decide), while this rule needs the whole
+    population to define "unusual for its sector". It therefore runs
+    only where the sector join exists (the trend report stage) and
+    only for sectors with at least sector_outlier_min_group
+    computable orgs. Returns hits in the standard long shape, plus
+    the cutoff used — the workpaper should show the bar that was
+    cleared.
+    """
+    if "ntee_major" not in df.columns:
+        return pd.DataFrame(
+            columns=["ein", "flag_id", "severity", "description",
+                     "sector_officer_comp_cutoff"]
+        )
+    ratio = _num(df, "officer_comp_ratio")
+    sector = df["ntee_major"]
+    ok = ratio.notna() & sector.notna()
+
+    counts = sector[ok].value_counts()
+    big_sectors = counts[counts >= t["sector_outlier_min_group"]].index
+    cuts = (
+        df.loc[ok & sector.isin(big_sectors)]
+        .groupby("ntee_major")["officer_comp_ratio"]
+        .quantile(t["sector_outlier_pctl"])
+    )
+    cutoff = sector.map(cuts)  # NA for unknown/small sectors
+    mask = (ratio > cutoff).fillna(False)
+
+    hits = df.loc[mask, ["ein"]].copy()
+    hits["flag_id"] = "SECTOR_OUTLIER_OFFICER_COMP"
+    hits["severity"] = "low"
+    hits["description"] = (
+        "Officer compensation share is unusually high relative to the "
+        "org's own NTEE sector."
+    )
+    hits["sector_officer_comp_cutoff"] = cutoff[mask].round(4)
+    return hits.reset_index(drop=True)
 
 
 def evaluate(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:

@@ -104,6 +104,30 @@ are structurally unlike charities (officer-heavy comp and thin
 reserves by design), so charity-focused review should read from the
 (c)(3) row. Reporting only, same rule as sectors.
 
+Added 2026-07-30, both approved as a batch:
+
+- CHRONIC_DEFICITS (high): expenses exceeded revenue in EVERY
+  observed filing, with at least chronic_deficit_min_years (default
+  5) of history. Tier above PERSISTENT_DEFICITS (a chronic org also
+  carries the persistent flag; the severity difference is the point).
+  First measurement on the six-year panel: 2.67% of orgs. High
+  severity because never once breaking even across 5+ observable
+  years is qualitatively different from a streak — but planned
+  endowment spend-down remains an innocent explanation, so the
+  disclaimer still governs.
+
+- SECTOR_OUTLIER_OFFICER_COMP (low): officer comp share above the
+  sector_outlier_pctl (default 0.95) quantile of the org's own NTEE
+  major group, computed only in sectors with at least
+  sector_outlier_min_group (default 300) computable orgs. This is
+  the first sector-AWARE rule: relative, not absolute — a hospital
+  is compared to hospitals. It runs only in the trend pipeline's
+  report stage (the only place the population carries sectors), and
+  each hit records the sector cutoff it cleared. Severity low while
+  the rule is young; an upgrade proposal should cite validation
+  against actual filings. First measurement: 13,458 hits (~3.3% of
+  all orgs; ~5% of eligible-by-construction).
+
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the
   XML phase (see docs/data-sources.md).

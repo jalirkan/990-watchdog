@@ -40,5 +40,8 @@ thresholds:
   runway_drop_streak_min: 2           # consecutive falls in months_net_assets
   runway_deteriorating_latest_max: 3.0  # ...ending below this many months
                                         # (6.0 -> 3.0 on 2026-07-29; see methodology)
+  chronic_deficit_min_years: 5          # deficit in EVERY observed year, 5+ years
+  sector_outlier_pctl: 0.95             # officer comp vs own NTEE sector
+  sector_outlier_min_group: 300         # sectors smaller than this: no relative screen
 
 output_dir: outputs

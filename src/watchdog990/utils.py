@@ -21,6 +21,9 @@ DEFAULTS: dict = {
         "persistent_deficit_years_min": 4,
         "runway_drop_streak_min": 2,
         "runway_deteriorating_latest_max": 3.0,
+        "chronic_deficit_min_years": 5,
+        "sector_outlier_pctl": 0.95,
+        "sector_outlier_min_group": 300,
     },
     "output_dir": "outputs",
 }

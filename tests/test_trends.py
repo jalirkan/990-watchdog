@@ -22,6 +22,9 @@ THRESHOLDS = {
     "persistent_deficit_years_min": 3,
     "runway_drop_streak_min": 2,
     "runway_deteriorating_latest_max": 6.0,
+    "chronic_deficit_min_years": 5,
+    "sector_outlier_pctl": 0.95,
+    "sector_outlier_min_group": 5,  # tiny for testability
 }
 
 
@@ -198,6 +201,55 @@ def test_bmf_ntee_major_and_sector_rates():
     assert edu.sector == "Education"
     no_ntee = table[table.ntee_major == "(no NTEE)"].iloc[0]
     assert no_ntee.n_orgs == 2 and no_ntee.n_flagged == 0
+
+
+def test_chronic_deficits_requires_every_observed_year_and_history():
+    all5 = trends.add_trend_metrics(
+        _metric_panel("000000040", [-0.1] * 5, [9] * 5)
+    )
+    four_of_five = trends.add_trend_metrics(
+        _metric_panel("000000041", [0.1, -0.1, -0.1, -0.1, -0.1], [9] * 5)
+    )
+    all4 = trends.add_trend_metrics(
+        _metric_panel("000000042", [-0.1] * 4, [9] * 4)
+    )
+    latest = pd.concat(
+        [panel.latest_per_org(x) for x in (all5, four_of_five, all4)],
+        ignore_index=True,
+    )
+    hits = flags.evaluate(latest, THRESHOLDS)
+    chronic = set(hits.loc[hits.flag_id == "CHRONIC_DEFICITS", "ein"])
+    assert chronic == {"000000040"}, (
+        "only the org in deficit every observed year with 5+ years fires"
+    )
+    # tiering: the chronic org also carries PERSISTENT_DEFICITS
+    persistent = set(hits.loc[hits.flag_id == "PERSISTENT_DEFICITS", "ein"])
+    assert "000000040" in persistent
+
+
+def test_sector_outliers_relative_to_own_sector():
+    df = pd.DataFrame(
+        {
+            "ein": [f"00000005{i}" for i in range(9)],
+            "officer_comp_ratio": [0.05, 0.06, 0.05, 0.04, 0.05, 0.90,  # sector A
+                                   0.95, 0.94,                          # sector B (too small)
+                                   0.99],                               # no sector
+            "ntee_major": ["A"] * 6 + ["B"] * 2 + [None],
+        }
+    )
+    hits = flags.sector_outliers(df, THRESHOLDS)
+    assert set(hits.ein) == {"000000055"}, (
+        "fires only in big-enough sectors, relative to that sector"
+    )
+    row = hits.iloc[0]
+    assert row.flag_id == "SECTOR_OUTLIER_OFFICER_COMP"
+    assert 0.05 < row.sector_officer_comp_cutoff < 0.90
+
+
+def test_sector_outliers_absent_sector_column_yields_empty():
+    df = pd.DataFrame({"ein": ["000000060"], "officer_comp_ratio": [0.99]})
+    hits = flags.sector_outliers(df, THRESHOLDS)
+    assert hits.empty
 
 
 def test_subsection_rates_normalizes_codes():

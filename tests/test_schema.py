@@ -26,6 +26,9 @@ THRESHOLDS = {
     "persistent_deficit_years_min": 3,
     "runway_drop_streak_min": 2,
     "runway_deteriorating_latest_max": 6.0,
+    "chronic_deficit_min_years": 5,
+    "sector_outlier_pctl": 0.95,
+    "sector_outlier_min_group": 300,
 }
 
 

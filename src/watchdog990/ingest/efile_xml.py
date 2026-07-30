@@ -17,10 +17,10 @@ Signals (Form 990, 2013+ schema era):
 
 Design notes, same discipline as schema.py:
 - ALTERNATES maps each canonical field to the XML element names it
-  may appear under across schema versions. Names marked VERIFY are
-  best-effort from the modern (TY2013+) schemas and must be checked
-  against the first real TEOS batch: an unexpectedly high NA rate in
-  the output IS the alarm.
+  may appear under across schema versions. Primary names were
+  verified on a real TEOS batch (0.00% NA); secondary names stay as
+  fallbacks for older schema eras — re-check if pre-2021 batches
+  show elevated NA.
 - Every parsed row records the return's schema version and, per
   field, nothing is guessed: unmatched -> NA, never a fake False.
 - Namespace handling uses the {*} wildcard, so the IRS namespace

@@ -183,11 +183,12 @@ that subset (currently 167,831 orgs, 41.5% of the panel):
   every hit is a question, not an answer.
 
 ## Known limitations
-- Extract files carry selected fields; some metrics are NA until the
-  XML phase (see docs/data-sources.md).
-- Single-year snapshots; trend analysis (a stronger signal) is a
-  roadmap item.
-- Sector matters: hospitals, universities, foundations, and
-  pass-through grantmakers have structurally different ratios.
-  NTEE-code peer-grouping is a roadmap item before any public
-  comparisons.
+- SOI extracts omit Part IX functional expense columns; program /
+  fundraising ratios require period-matched e-file XML (see
+  docs/data-sources.md). Coverage is wide but not complete.
+- Sector-aware absolute thresholds (beyond the relative
+  SECTOR_OUTLIER_OFFICER_COMP rule) are still open — the summary's
+  sector and subsection tables are the evidence base, not yet a
+  full peer-threshold set.
+- A flag is never a finding. Manual review of the actual return
+  remains the gate before naming any organization in public.

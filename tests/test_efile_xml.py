@@ -1,8 +1,8 @@
 """Phase-3 tests: governance parsing from e-file XML fixtures.
 
 Synthetic returns in the modern (TY2013+) namespaced shape — no
-downloads, no network. The ALTERNATES names these fixtures exercise
-still carry VERIFY status until a real TEOS batch is parsed.
+downloads, no network. Fixtures exercise both primary element names
+and documented ALTERNATES (schema-version drift).
 
 Run with either:
     pytest -q

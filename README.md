@@ -11,6 +11,7 @@ before sharing any output.
 ## Quickstart
 
 ```bash
+# Requires Python 3.10+ (3.12 recommended)
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
@@ -75,14 +76,16 @@ tests/          synthetic-data tests, no network needed
 
 - **Phase 1 (done):** extract-based screening, single year.
 - **Phase 2 (done):** multi-year trends (`watchdog990 trend`) and
-  NTEE sector rate reporting. Sector-aware *thresholds* remain open —
-  the summary's sector table is the evidence base.
-- **Phase 3 (started):** e-file XML governance signals — material
-  diversion checkbox, loans to insiders, board independence,
-  Schedule L. Parser + `watchdog990 xml` landed; screening-flag
-  integration waits on validation against a real TEOS batch.
-- **Phase 4:** publish — methodology write-up first, findings second
-  (`docs/methodology-writeup.md`, `docs/findings-writeup.md`).
+  NTEE sector rate reporting. Sector-aware *thresholds* beyond
+  `SECTOR_OUTLIER_OFFICER_COMP` remain open — the summary's sector
+  table is the evidence base.
+- **Phase 3 (done):** e-file XML governance signals — material
+  diversion flag, insider-loan / board-independence context columns,
+  Schedule L presence, period-matched expense-breakdown rules via
+  `watchdog990 xml` and `trend --governance`.
+- **Phase 4 (done):** methodology write-up first, findings companion
+  second (`docs/methodology-writeup.md`, `docs/findings-writeup.md`).
+  Annual refresh cycle: `docs/refresh-runbook.md`.
 
 ## License
 

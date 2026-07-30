@@ -14,8 +14,11 @@ build/
 dist/
 .pytest_cache/
 
-# Local env / editors
+# Local env / editors / tooling
 .env
 .vscode/
 .idea/
 .ipynb_checkpoints/
+.cursor/
+.claude/
+*.code-workspace

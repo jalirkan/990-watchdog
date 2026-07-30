@@ -74,7 +74,9 @@ watchdog990 xml --path data/raw/<batch>.zip --label <batch>
 **Checks:** zero (or near-zero) unparseable files; per-field NA
 rates printed by the command — a jump on any field means the IRS
 renamed an element; fix `ALTERNATES` in `ingest/efile_xml.py`, add
-the old name as a fallback, test, note it. Concatenate the parsed
+the old name as a fallback, test, note it. If a batch reports ~100%
+unparseable, it is almost certainly Deflate64 compression (seen on
+2025_TEOS_XML_11B): extract with `unzip` and parse the folder. Concatenate the parsed
 CSVs into one governance file, re-run the report stage with
 `--governance`, and regenerate `diversion_review_<year>.csv` for the
 manual review queue.

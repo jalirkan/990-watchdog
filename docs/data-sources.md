@@ -119,6 +119,22 @@ governance context on 83.0% of flagged orgs. index_2025.csv on hand;
 outputs/xml_plan_2025.csv ranks 2025 batches for the next round
 (top: 11A/11D/11C/04A).
 
+**2025 targeted round (2026-07-30):** seven batches parsed (04A,
+08A, 09A, 11A-11D), 379,996 returns, zero unparseable, 178 further
+diversion admissions. Unified governance base
+(outputs/governance_all.csv): 1,067,727 records; newer submissions
+supersede on (EIN, tax period). Governance context now covers 84.4%
+of flagged orgs; the combined diversion workpaper
+(outputs/diversion_review_2024-2025.csv) holds 432 unique orgs, all
+with Schedule O explanations.
+
+**Gotcha, learned the hard way:** 2025_TEOS_XML_11B ships with
+Deflate64 compression, which Python's zipfile cannot read (every
+member "unparseable"). Fix: extract with Info-ZIP `unzip` (supports
+enhanced deflate) and point the parser at the folder. If a batch
+reports ~100% unparseable, check the compression method before
+suspecting the parser.
+
 Targeted acquisition workflow:
 1. `watchdog990 xml-plan --flags outputs/flags_<label>.csv --index
    data/raw/index_<year>.csv` ranks batch zips by flagged-org

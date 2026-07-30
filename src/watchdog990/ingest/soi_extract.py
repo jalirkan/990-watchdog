@@ -14,7 +14,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from watchdog990.schema import to_canonical
+from watchdog990.schema import SOI_990_COLUMN_MAP, to_canonical
 
 
 def download(url: str, dest: str | Path, timeout: int = 120) -> Path:
@@ -43,3 +43,22 @@ def load(path: str | Path, canonical: bool = True) -> pd.DataFrame:
         encoding="utf-8-sig",
     )
     return to_canonical(df) if canonical else df
+
+
+def load_slim(path: str | Path) -> pd.DataFrame:
+    """Read only the mapped columns of an extract CSV, canonicalized.
+
+    For multi-year panels: three full-width years (246 columns each)
+    do not fit in a small-memory environment, and the metrics/flags
+    layers only consume mapped canonical fields anyway. Case-matches
+    the header like to_canonical does.
+    """
+    wanted = {v.lower() for v in SOI_990_COLUMN_MAP.values()}
+    df = pd.read_csv(
+        path,
+        usecols=lambda c: c.lower() in wanted,
+        dtype={"EIN": "string", "ein": "string"},
+        low_memory=False,
+        encoding="utf-8-sig",
+    )
+    return to_canonical(df)

@@ -8,7 +8,7 @@ you join onto extract EINs so flags have names attached.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable
+from typing import Collection, Iterable
 
 import pandas as pd
 
@@ -17,19 +17,38 @@ from watchdog990.schema import normalize_ein
 KEEP = ["EIN", "NAME", "CITY", "STATE", "NTEE_CD", "SUBSECTION"]
 
 
-def load(paths: Iterable[str | Path]) -> pd.DataFrame:
-    """Concatenate one or more BMF CSVs into an EIN-keyed lookup."""
+def load(
+    paths: Iterable[str | Path],
+    keep_eins: Collection[str] | None = None,
+) -> pd.DataFrame:
+    """Concatenate one or more BMF CSVs into an EIN-keyed lookup.
+
+    keep_eins: optional set of normalized 9-char EINs; each file is
+    filtered to it at load time. The full-country BMF is ~2M rows and
+    a screen only needs the orgs in its panel — filtering per file
+    keeps peak memory flat on small machines.
+    """
+    keep = set(keep_eins) if keep_eins is not None else None
     frames = []
     for p in paths:
-        df = pd.read_csv(p, dtype="string", low_memory=False)
+        # usecols at read time: the region files are large and we
+        # keep 6 of ~30 columns; no reason to parse the rest.
+        df = pd.read_csv(
+            p,
+            usecols=lambda c: c.upper() in KEEP,
+            dtype="string",
+            low_memory=False,
+        )
         df.columns = [c.upper() for c in df.columns]
-        cols = [c for c in KEEP if c in df.columns]
-        frames.append(df[cols])
+        df["EIN"] = normalize_ein(df["EIN"])
+        if keep is not None:
+            df = df[df["EIN"].isin(keep)]
+        frames.append(df[[c for c in KEEP if c in df.columns]])
     if not frames:
         return pd.DataFrame(columns=[c.lower() for c in KEEP])
     out = pd.concat(frames, ignore_index=True)
+    frames.clear()
     out.columns = [c.lower() for c in out.columns]
-    out["ein"] = normalize_ein(out["ein"])
     if "ntee_cd" in out.columns:
         # First letter of the NTEE code is the major group (A-Z);
         # anything unparseable stays NA rather than a fake sector.

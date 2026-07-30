@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 
+import numpy as np
 import pandas as pd
 
 log = logging.getLogger(__name__)
@@ -41,12 +42,15 @@ def build_panel(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     if not frames:
         return pd.DataFrame(columns=["ein", "tax_period", "processing_year"])
 
-    parts = []
-    for label in sorted(frames):
-        f = frames[label].copy()
-        f["processing_year"] = str(label)
-        parts.append(f)
+    # Single concat, then one label column via repeat — avoids
+    # per-frame copies (three years of filings on a small machine).
+    labels = sorted(frames)
+    parts = [frames[lb] for lb in labels]
     panel = pd.concat(parts, ignore_index=True)
+    panel["processing_year"] = np.repeat(
+        [str(lb) for lb in labels], [len(p) for p in parts]
+    )
+    del parts
 
     panel["tax_period"] = pd.to_numeric(panel["tax_period"], errors="coerce")
     n_no_period = int(panel["tax_period"].isna().sum())

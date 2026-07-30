@@ -200,6 +200,84 @@ def test_bmf_ntee_major_and_sector_rates():
     assert no_ntee.n_orgs == 2 and no_ntee.n_flagged == 0
 
 
+def test_bmf_keep_eins_filters_at_load():
+    import tempfile
+    from pathlib import Path
+
+    from watchdog990.ingest import bmf as bmf_mod
+
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "eo_test.csv"
+        p.write_text(
+            "EIN,NAME,CITY,STATE,NTEE_CD,SUBSECTION\n"
+            "21,KEEP ME,NYC,NY,A10,03\n"
+            "22,DROP ME,NYC,NY,B20,03\n"
+        )
+        names = bmf_mod.load([p], keep_eins={"000000021"})
+    assert names.ein.tolist() == ["000000021"]
+    assert names.name.tolist() == ["KEEP ME"]
+
+
+def test_trend_cli_staged_end_to_end():
+    """panel -> names -> report through the real CLI with checkpoint
+    round-trips (EIN zero-padding must survive the CSV boundary)."""
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from watchdog990 import cli
+
+    hdr = (
+        "EIN,tax_pd,totrevenue,totcntrbgfts,totprgmrevnue,totfuncexpns,"
+        "compnsatncurrofcr,othrsalwages,lessdirfndrsng,totassetsend,"
+        "totliabend,totnetassetend\n"
+    )
+    # org 1: three deficit years, runway 12 -> 6 -> 2.4 months
+    # org 2: healthy
+    years = {
+        "2022": ["1,202112,90,10,80,100,0,0,0,150,50,100", "2,202112,120,0,120,100,0,0,0,300,100,100"],
+        "2023": ["1,202212,90,10,80,100,0,0,0,110,60,50", "2,202212,120,0,120,100,0,0,0,300,100,110"],
+        "2024": ["1,202312,90,10,80,100,0,0,0,90,70,20", "2,202312,120,0,120,100,0,0,0,300,100,120"],
+    }
+    cwd = os.getcwd()
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            os.chdir(d)
+            Path("data/raw").mkdir(parents=True)
+            for yr, rows in years.items():
+                Path(f"data/raw/{yr}.csv").write_text(hdr + "\n".join(rows) + "\n")
+            Path("data/raw/bmf.csv").write_text(
+                "EIN,NAME,CITY,STATE,NTEE_CD,SUBSECTION\n"
+                "1,SLIDING ORG,ALBANY,NY,B25,03\n"
+                "2,FINE ORG,BUFFALO,NY,,03\n"
+            )
+            Path("s.yaml").write_text(
+                "extract_files:\n"
+                '  "2022": data/raw/2022.csv\n'
+                '  "2023": data/raw/2023.csv\n'
+                '  "2024": data/raw/2024.csv\n'
+                "output_dir: out\n"
+            )
+            assert cli.main(["trend", "--stage", "panel", "--config", "s.yaml"]) == 0
+            assert cli.main(
+                ["trend", "--stage", "names", "--config", "s.yaml",
+                 "--bmf", "data/raw/bmf.csv"]
+            ) == 0
+            assert cli.main(["trend", "--stage", "report", "--config", "s.yaml"]) == 0
+
+            summary = Path("out/summary_2022-2024_trend.md").read_text()
+            assert "PERSISTENT_DEFICITS" in summary
+            assert "DETERIORATING_RUNWAY" in summary
+            assert "SLIDING ORG" in summary
+            assert "FINE ORG" not in summary  # healthy org stays clean
+            assert "NTEE" in summary
+
+            hits = pd.read_csv("data/interim/trend_hits.csv", dtype={"ein": "string"})
+            assert set(hits.ein) == {"000000001"}  # zfill survived
+        finally:
+            os.chdir(cwd)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

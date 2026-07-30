@@ -94,9 +94,16 @@ Schedule L). Distribution (verified live 2026-07-30):
   bulk-downloading a whole year.
 
 `watchdog990 xml --path <dir-or-zip>` parses files or TEOS zips in
-place (no extraction) into `outputs/governance_<label>.csv`. Element
-names in `ingest/efile_xml.py` ALTERNATES marked VERIFY are
-unconfirmed until the first real batch: the command prints per-field
-NA rates as the alarm, same drill as the extract schema. The `irsx`
-library remains worth evaluating if parsing needs grow past these
-four signals; the current hand-rolled parser is deliberately minimal.
+place (no extraction) into `outputs/governance_<label>.csv`, printing
+per-field NA rates as the verification alarm. The `irsx` library
+remains worth evaluating if parsing needs grow past these four
+signals; the current hand-rolled parser is deliberately minimal.
+
+**Validated 2026-07-30** on `2024_TEOS_XML_01A.zip` (105 MB, in
+`data/raw/`): 17,246 returns (9,682 Form 990), schema versions
+2021v4.0-2023v4.0, 0.00% NA on every parsed field, zero unparseable
+files. Batch stats: material diversion 0.06% of 990s, insider loans
+2.01%, median board fully independent, Schedule L on 6.38%. One
+diversion admission tied to its real filing via ProPublica (EIN
+943292800, FY 2023-09). `index_2024.csv` (also in data/raw/) maps
+every 2024 return to its batch zip for targeted downloads.

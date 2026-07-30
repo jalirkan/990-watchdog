@@ -356,6 +356,7 @@ def test_trend_cli_staged_end_to_end():
             summary = Path("out/summary_2021-2024_trend.md").read_text()
             assert "Governance signals" in summary
             assert "Material diversion of assets reported: 1" in summary
+            assert "MATERIAL_DIVERSION" in summary  # promoted to a flag
             flags_csv = pd.read_csv(
                 "out/flags_2021-2024_trend.csv", dtype={"ein": "string"}
             )

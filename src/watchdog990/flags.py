@@ -165,6 +165,35 @@ REGISTRY: list[Flag] = [
 ]
 
 
+def governance_flags(gov: pd.DataFrame, panel_eins: set) -> pd.DataFrame:
+    """Governance rules from parsed e-file XML (methodology change
+    approved 2026-07-30).
+
+    MATERIAL_DIVERSION (high): the org checked Part VI line 5 — a
+    self-reported discovery of material diversion of assets — on a
+    signed return. Fires for ANY panel org with the admission, not
+    just orgs already flagged on ratios: a clean balance sheet does
+    not neutralize a diversion admission. The counterweight is in the
+    description and methodology: self-reporting WITH remediation is
+    transparency; the flag means "read Schedule O", never more.
+
+    Insider loans and board independence deliberately stay context
+    columns, not flags (2% base rate and continuous-valued
+    respectively — better sort keys than binary alarms).
+    """
+    if gov.empty or "material_diversion" not in gov.columns:
+        return pd.DataFrame(columns=["ein", "flag_id", "severity", "description"])
+    mask = (gov["material_diversion"] == True) & gov["ein"].isin(panel_eins)  # noqa: E712
+    hits = gov.loc[mask, ["ein"]].copy()
+    hits["flag_id"] = "MATERIAL_DIVERSION"
+    hits["severity"] = "high"
+    hits["description"] = (
+        "Org reported discovering a material diversion of assets "
+        "(Part VI line 5). Read Schedule O for the org's explanation."
+    )
+    return hits.reset_index(drop=True)
+
+
 def sector_outliers(df: pd.DataFrame, t: dict) -> pd.DataFrame:
     """Sector-RELATIVE screen: officer comp ratio above the
     sector_outlier_pctl quantile of the org's own NTEE major group.

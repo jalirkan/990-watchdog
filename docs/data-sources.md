@@ -108,6 +108,11 @@ diversion admission tied to its real filing via ProPublica (EIN
 943292800, FY 2023-09). `index_2024.csv` (also in data/raw/) maps
 every 2024 return to its batch zip for targeted downloads.
 
+**Batches on hand (2026-07-30):** 01A (105 MB), 05A (977 MB), 11A
+(1.17 GB) — 360,115 returns parsed total, zero unparseable, 182,601
+Form 990s. Governance coverage of the six-year flagged population:
+41.8%.
+
 Targeted acquisition workflow:
 1. `watchdog990 xml-plan --flags outputs/flags_<label>.csv --index
    data/raw/index_<year>.csv` ranks batch zips by flagged-org

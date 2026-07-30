@@ -131,11 +131,23 @@ Added 2026-07-30, both approved as a batch:
 ## Governance signals (phase 3, parser landed 2026-07-30)
 `watchdog990 xml` parses material diversion, insider loans, board
 independence, and Schedule L presence from e-filed returns into a
-standalone governance CSV. These are deliberately NOT screening
-flags yet: the XML element names carry VERIFY status until validated
-against a real TEOS batch, and a governance checkbox is a stronger
-claim than a ratio — integration into the flag registry will be its
-own proposed, dated methodology change.
+governance CSV; `trend --stage report --governance <csv>` joins them
+onto the screen.
+
+MATERIAL_DIVERSION (high) — approved 2026-07-30, after the parser
+validated at 0.00% NA on a real TEOS batch. A checked Part VI line 5
+is a self-reported discovery of material diversion of assets on a
+signed return; base rate ~0.06% of Form 990s, so the queue cannot
+flood. It fires for any panel org with the admission, including orgs
+whose ratios are clean. Counterweight, stated everywhere the flag
+appears: an org that self-reports and explains remediation in
+Schedule O is exhibiting transparency — the flag means "read
+Schedule O," never more.
+
+Insider loans and board independence remain context columns, not
+flags: a 2% base-rate boolean and a continuous share are better
+review-queue sort keys than binary alarms. Any promotion is its own
+dated proposal.
 
 ## Known limitations
 - Extract files carry selected fields; some metrics are NA until the

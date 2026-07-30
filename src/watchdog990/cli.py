@@ -175,6 +175,10 @@ def _trend_stage_report(settings: dict, args: argparse.Namespace) -> int:
             ]
             .rename(columns={"tax_period": "gov_tax_period"})
         )
+        gov_hits = flags.governance_flags(gov, set(latest["ein"]))
+        if not gov_hits.empty:
+            log.info("MATERIAL_DIVERSION hits (panel-wide): %s", len(gov_hits))
+            hits = pd.concat([hits, gov_hits], ignore_index=True)
         before_cov = hits["ein"].isin(set(gov["ein"])).sum()
         hits = hits.merge(gov, on="ein", how="left")
         flagged_gov = gov[gov["ein"].isin(set(hits["ein"]))]

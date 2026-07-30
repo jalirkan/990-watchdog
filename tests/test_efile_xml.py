@@ -142,6 +142,22 @@ def test_xml_cli_end_to_end():
             os.chdir(cwd)
 
 
+def test_governance_flags_fire_for_panel_orgs_only():
+    from watchdog990 import flags
+
+    gov = pd.DataFrame(
+        {
+            "ein": ["000000070", "000000071", "000000072", "000000073"],
+            "material_diversion": [True, True, False, pd.NA],
+        }
+    )
+    hits = flags.governance_flags(gov, panel_eins={"000000070", "000000072", "000000073"})
+    assert set(hits.ein) == {"000000070"}  # in panel + admitted
+    assert hits.iloc[0].flag_id == "MATERIAL_DIVERSION"
+    assert hits.iloc[0].severity == "high"
+    # org 71 admitted but not in panel; 72 answered No; 73 unknown -> none fire
+
+
 def test_xml_plan_ranks_batches_by_flagged_coverage():
     import os
     import tempfile

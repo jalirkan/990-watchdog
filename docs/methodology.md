@@ -62,12 +62,27 @@ Trend rules (added 2026-07-29, phase 2):
   deficit year is noise; three is a pattern. Innocent explanations
   include planned endowment spend-down and multi-year capital
   projects — which is why this is medium, not high.
+
+  Base-rate note 2026-07-29 (PY2022-2024 panel): fires on 7.1% of all
+  orgs / 9.5% of orgs with 3+ filings. Elevated, and deliberately
+  left alone: the trailing window is 2020-2023 fiscal years, a
+  genuinely hard stretch for the sector, so the elevated rate is
+  era signal rather than mistuning. Revisit (e.g. 4+ consecutive)
+  when more processing years make longer streaks observable.
 - DETERIORATING_RUNWAY (medium): months_net_assets fell in
   runway_drop_streak_min (default 2) consecutive filings AND ended
-  below runway_deteriorating_latest_max (default 6 months). Both legs
-  required: a fall from 60 to 40 months is not distress. Defaults are
-  first-pass judgment calls to be revisited against the real hit
-  rates, openly, like the phase-1 thresholds.
+  below runway_deteriorating_latest_max (default 3 months). Both legs
+  required: a fall from 60 to 40 months is not distress.
+
+  Tuning log 2026-07-29 (PY2022-2024 panel, 370,245 orgs): the cap
+  was tightened 6.0 -> 3.0 months. Evidence: 32% of orgs with 3+
+  filings showed 2+ consecutive runway drops (COVID-era reserves
+  normalizing), so the streak leg alone carries little signal in this
+  window and the cap does the work; at 6.0 the flag hit 7.8% of all
+  orgs (largest in the report), at 3.0 it hits 4.9% — in line with
+  the other flags, and "under a quarter-year of runway and still
+  falling" is the crisper screening statement. A 3-drop streak
+  (0.36%) is not viable until more processing years widen the window.
 - Trend rules only fire when the trend columns exist (multi-year
   runs); single-year runs are unaffected.
 

@@ -43,3 +43,24 @@ Method note: lookups performed via the same ProPublica v2 endpoints
 the CLI `org` command uses (sandbox network restrictions prevented
 running the CLI itself this session); one request at a time, matching
 the client's rate courtesy.
+
+## Trend validation — PY2022-2024 panel (2026-07-29)
+
+Two orgs flagged by the trend rules, series checked across all three
+panel years:
+
+- 236278321 Chester County Night School (PA): panel shows margins
+  −0.417 / −0.173 / −0.021 and runway 7.72 → 2.48 → −3.86 months
+  (tax periods 202106/202206/202306). All 12 field values (4 fields ×
+  3 years) match ProPublica exactly. PERSISTENT_DEFICITS,
+  DETERIORATING_RUNWAY, NEGATIVE_NET_ASSETS, OFFICER_COMP_HEAVY all
+  arithmetically correct. Context: org has dipped negative before
+  (FY2016) and recovered — flag ≠ finding, as ever.
+- 526065968 Communication Workers of America local (MD): deficits ×3,
+  runway 2.76 → 1.39 → 0.65, officer comp 60% of expenses — verified
+  against the panel series; structurally typical for a small 501(c)(5)
+  local where officers are the staff. Reinforces the case for
+  sector/subsection-aware context before publication.
+
+Verdict: trend streaks reflect actual filing series; no panel or
+dedup artifacts observed.

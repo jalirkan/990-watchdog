@@ -29,6 +29,17 @@ Then get data (all free, all public — links in `config/settings.yaml`):
 watchdog990 run --extract data/raw/<extract>.csv --bmf data/raw/<bmf>.csv --label 2023
 ```
 
+With several years in `extract_files`, run the multi-year trend screen
+(point flags on each org's latest filing + deficit/runway streaks;
+sector table needs BMF files in `bmf_files`):
+
+```bash
+watchdog990 trend                      # all configured years
+watchdog990 trend --stage panel        # resumable, for small machines:
+watchdog990 trend --stage names --bmf data/raw/eo1.csv data/raw/eo2.csv
+watchdog990 trend --stage report
+```
+
 Outputs land in `outputs/`: a full `flags_<label>.csv` and a readable
 `summary_<label>.md`. Spot-check any org against its actual filing:
 
@@ -62,9 +73,10 @@ tests/          synthetic-data tests, no network needed
 
 ## Roadmap
 
-- **Phase 1 (now):** extract-based screening, single year.
-- **Phase 2:** multi-year trends (deteriorating ratios beat snapshots);
-  NTEE peer groups so hospitals aren't compared to food banks.
+- **Phase 1 (done):** extract-based screening, single year.
+- **Phase 2 (done):** multi-year trends (`watchdog990 trend`) and
+  NTEE sector rate reporting. Sector-aware *thresholds* remain open —
+  the summary's sector table is the evidence base.
 - **Phase 3:** IRS e-file XML via `irsx` for governance signals —
   material diversion checkbox, loans to insiders, board independence,
   Schedule L related parties.

@@ -61,6 +61,13 @@ DIRTY = f"""<?xml version="1.0" encoding="utf-8"?>
       <LoanOutstandingInd>1</LoanOutstandingInd>
     </IRS990>
     <IRS990ScheduleL><Anything/></IRS990ScheduleL>
+    <IRS990ScheduleO>
+      <SupplementalInformationDetail>
+        <FormAndLineReferenceDesc>Form 990, Part VI, Line 5</FormAndLineReferenceDesc>
+        <ExplanationTxt>A former employee diverted funds.
+          The board engaged counsel and recovered the amounts.</ExplanationTxt>
+      </SupplementalInformationDetail>
+    </IRS990ScheduleO>
   </ReturnData>
 </Return>
 """
@@ -103,6 +110,15 @@ def test_expense_breakdown_absent_group_yields_na():
     rec = efile_xml.parse_return(DIRTY.encode())
     assert pd.isna(rec["program_expenses"])
     assert pd.isna(rec["fundraising_expenses"])
+
+
+def test_schedule_o_text_captured_only_for_diversion_admissions():
+    dirty = efile_xml.parse_return(DIRTY.encode())
+    assert "[Form 990, Part VI, Line 5]" in dirty["schedule_o_text"]
+    assert "recovered the amounts" in dirty["schedule_o_text"]
+    assert "\n" not in dirty["schedule_o_text"]  # whitespace normalized
+    clean = efile_xml.parse_return(CLEAN.encode())
+    assert pd.isna(clean["schedule_o_text"])  # no admission -> no capture
 
 
 def test_contribution_breakdown_for_private_giving_rebase():

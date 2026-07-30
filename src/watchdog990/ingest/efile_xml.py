@@ -193,6 +193,30 @@ def parse_return(source) -> dict:
     rec.update(_contribution_breakdown(root))
 
     rec["schedule_l_present"] = root.find(".//{*}IRS990ScheduleL") is not None
+
+    # Review support: when an org admits a material diversion, carry
+    # its own Schedule O explanation text alongside the flag — the
+    # manual review gate needs exactly this in front of it. Only
+    # captured for diversion admissions (keeps the CSV sane), capped
+    # defensively.
+    rec["schedule_o_text"] = pd.NA
+    if rec["material_diversion"] is True:
+        sched_o = root.find(".//{*}IRS990ScheduleO")
+        if sched_o is not None:
+            parts = []
+            for grp in sched_o.iter():
+                if grp.tag.endswith("SupplementalInformationDetail"):
+                    ref = grp.find("{*}FormAndLineReferenceDesc")
+                    txt = grp.find("{*}ExplanationTxt")
+                    if txt is not None and txt.text:
+                        prefix = (
+                            f"[{ref.text.strip()}] "
+                            if ref is not None and ref.text
+                            else ""
+                        )
+                        parts.append(prefix + " ".join(txt.text.split()))
+            if parts:
+                rec["schedule_o_text"] = " || ".join(parts)[:6000]
     # A record is only a Form 990 governance record if the core 990
     # form is present (the TEOS batches also carry 990-EZ/PF).
     rec["is_form_990"] = root.find(".//{*}IRS990") is not None

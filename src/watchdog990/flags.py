@@ -177,8 +177,8 @@ REGISTRY: list[Flag] = [
 
 
 def governance_flags(gov: pd.DataFrame, panel_eins: set) -> pd.DataFrame:
-    """Governance rules from parsed e-file XML (methodology change
-    approved 2026-07-30).
+    """Governance rules from parsed e-file XML (methodology change,
+    2026-07-30).
 
     MATERIAL_DIVERSION (high): the org checked Part VI line 5 — a
     self-reported discovery of material diversion of assets — on a

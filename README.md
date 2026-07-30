@@ -81,4 +81,11 @@ tests/          synthetic-data tests, no network needed
   diversion checkbox, loans to insiders, board independence,
   Schedule L. Parser + `watchdog990 xml` landed; screening-flag
   integration waits on validation against a real TEOS batch.
-- **Phase 4:** publish — methodology write-up first, findings second.
+- **Phase 4:** publish — methodology write-up first, findings second
+  (`docs/methodology-writeup.md`, `docs/findings-writeup.md`).
+
+## License
+
+MIT — see `LICENSE`. The methodology's screening posture travels with
+any fork: a flag means "look closer," never "wrongdoing," and the
+report disclaimer stays.

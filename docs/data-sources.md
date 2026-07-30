@@ -104,8 +104,9 @@ signals; the current hand-rolled parser is deliberately minimal.
 2021v4.0-2023v4.0, 0.00% NA on every parsed field, zero unparseable
 files. Batch stats: material diversion 0.06% of 990s, insider loans
 2.01%, median board fully independent, Schedule L on 6.38%. One
-diversion admission tied to its real filing via ProPublica (EIN
-943292800, FY 2023-09). `index_2024.csv` (also in data/raw/) maps
+diversion admission tied to its real filing via ProPublica (a small
+California housing organization; identity withheld pending the
+Schedule O review gate). `index_2024.csv` (also in data/raw/) maps
 every 2024 return to its batch zip for targeted downloads.
 
 **Batches on hand (2026-07-30): ALL TWELVE 2024 monthly batches** —

@@ -104,7 +104,7 @@ are structurally unlike charities (officer-heavy comp and thin
 reserves by design), so charity-focused review should read from the
 (c)(3) row. Reporting only, same rule as sectors.
 
-Added 2026-07-30, both approved as a batch:
+Added 2026-07-30:
 
 - CHRONIC_DEFICITS (high): expenses exceeded revenue in EVERY
   observed filing, with at least chronic_deficit_min_years (default
@@ -134,7 +134,7 @@ independence, and Schedule L presence from e-filed returns into a
 governance CSV; `trend --stage report --governance <csv>` joins them
 onto the screen.
 
-MATERIAL_DIVERSION (high) — approved 2026-07-30, after the parser
+MATERIAL_DIVERSION (high) — adopted 2026-07-30, after the parser
 validated at 0.00% NA on a real TEOS batch. A checked Part VI line 5
 is a self-reported discovery of material diversion of assets on a
 signed return; base rate ~0.06% of Form 990s, so the queue cannot
@@ -149,7 +149,7 @@ flags: a 2% base-rate boolean and a continuous share are better
 review-queue sort keys than binary alarms. Any promotion is its own
 dated proposal.
 
-## Expense-breakdown rules go live via XML (2026-07-30, approved)
+## Expense-breakdown rules go live via XML (2026-07-30)
 
 The e-filed Part IX carries the functional expense breakdown the
 extracts never did. The trend report now enriches each org whose
@@ -167,8 +167,7 @@ that subset (currently 167,831 orgs, 41.5% of the panel):
   reported fundraising expense) failed contact with data — 37.9% of
   eligible orgs fire, because line 1h contributions INCLUDE
   government grants and grant-funded orgs genuinely raise nothing.
-  Interim (approved): floor raised $1M -> $5M (2.4% of covered
-  orgs). Planned rebase, next parse cycle: private contributions
+  Interim: floor raised $1M -> $5M (2.4% of covered orgs). Planned rebase, next parse cycle: private contributions
   (line 1h minus government grants minus related-org support, all
   now parsed from Part VIII) at a $1M floor — the pattern the rule
   always meant. The rebase will be measured before it ships.

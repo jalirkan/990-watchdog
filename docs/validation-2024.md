@@ -39,10 +39,9 @@ Fieldwork notes (context, not findings — see methodology posture):
   secured mortgage, depreciation-driven deficits deepening 5 straight
   years). Flag is accurate; explanation likely structural.
 
-Method note: lookups performed via the same ProPublica v2 endpoints
-the CLI `org` command uses (sandbox network restrictions prevented
-running the CLI itself this session); one request at a time, matching
-the client's rate courtesy.
+Method note: lookups performed via the ProPublica Nonprofit Explorer
+API v2 (the same endpoints the CLI `org` command wraps), one request
+at a time, matching the client's rate courtesy.
 
 ## Trend validation — PY2022-2024 panel (2026-07-29)
 

@@ -48,23 +48,59 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/nonet"
           cat > "$RUNNER_TEMP/nonet/sitecustomize.py" <<'PY'
-          """Refuse every socket: these tests are synthetic by construction."""
+          """Refuse any socket that would leave this machine.
+
+          Replacing socket.socket outright is tempting and wrong: ssl.py does
+          `class SSLSocket(socket)` at import time, so a function in that slot
+          breaks `import ssl` with a TypeError that has nothing to do with the
+          code under test. Guarding the operations that actually reach the
+          network leaves the type hierarchy intact.
+          """
           import socket
 
+          _LOCAL = {"127.0.0.1", "::1", "localhost", "ip6-localhost", "", None}
+          _getaddrinfo = socket.getaddrinfo
+          _connect = socket.socket.connect
+          _connect_ex = socket.socket.connect_ex
 
-          def _blocked(*_args, **_kwargs):
+
+          def _refuse(host):
               raise OSError(
-                  "network access attempted; this suite is offline by design")
+                  "network access attempted to %r; this suite is offline by "
+                  "design" % (host,))
 
 
-          socket.socket = _blocked
-          socket.create_connection = _blocked
-          socket.getaddrinfo = _blocked
+          def _guarded_getaddrinfo(host, *a, **k):
+              if host not in _LOCAL:
+                  _refuse(host)
+              return _getaddrinfo(host, *a, **k)
+
+
+          def _guarded_connect(self, address):
+              if isinstance(address, tuple) and address and address[0] not in _LOCAL:
+                  _refuse(address[0])
+              return _connect(self, address)
+
+
+          def _guarded_connect_ex(self, address):
+              if isinstance(address, tuple) and address and address[0] not in _LOCAL:
+                  _refuse(address[0])
+              return _connect_ex(self, address)
+
+
+          socket.getaddrinfo = _guarded_getaddrinfo
+          socket.socket.connect = _guarded_connect
+          socket.socket.connect_ex = _guarded_connect_ex
           PY
           export PYTHONPATH="$RUNNER_TEMP/nonet"
-          if python -c "import socket; socket.socket()" 2>/dev/null; then
-            echo "the socket guard did not take effect" >&2
-            exit 1
-          fi
-          echo "socket guard active"
+          python - <<'PY'
+          import socket, ssl, sys  # ssl must still import
+          try:
+              socket.getaddrinfo("example.com", 80)
+          except OSError:
+              pass
+          else:
+              sys.exit("guard did not take effect: DNS still resolves")
+          print("socket guard active; ssl imports")
+          PY
           pytest -q

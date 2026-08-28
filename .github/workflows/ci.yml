@@ -40,11 +40,31 @@ jobs:
       # all so the claim is checked rather than trusted. This proves
       # the tests, not the install above, which of course needs pip.
       - name: Tests, offline
+        # The suite is synthetic and must need no network. An unprivileged
+        # network namespace would be the cleanest proof, but GitHub's runner
+        # refuses it (unshare cannot write /proc/self/uid_map), so the denial
+        # happens in-process instead: a sitecustomize that makes every socket
+        # raise. Same claim, checked a way that works here.
         run: |
-          unshare -rn true || {
-            echo "Unprivileged network namespaces unavailable on this runner;"
-            echo "the offline claim cannot be checked here. Fix the runner or"
-            echo "drop this step deliberately — do not let it pass quietly."
+          mkdir -p "$RUNNER_TEMP/nonet"
+          cat > "$RUNNER_TEMP/nonet/sitecustomize.py" <<'PY'
+          """Refuse every socket: these tests are synthetic by construction."""
+          import socket
+
+
+          def _blocked(*_args, **_kwargs):
+              raise OSError(
+                  "network access attempted; this suite is offline by design")
+
+
+          socket.socket = _blocked
+          socket.create_connection = _blocked
+          socket.getaddrinfo = _blocked
+          PY
+          export PYTHONPATH="$RUNNER_TEMP/nonet"
+          if python -c "import socket; socket.socket()" 2>/dev/null; then
+            echo "the socket guard did not take effect" >&2
             exit 1
-          }
-          unshare -rn pytest -q
+          fi
+          echo "socket guard active"
+          pytest -q

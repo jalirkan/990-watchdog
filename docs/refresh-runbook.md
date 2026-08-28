@@ -74,12 +74,23 @@ watchdog990 xml --path data/raw/<batch>.zip --label <batch>
 **Checks:** zero (or near-zero) unparseable files; per-field NA
 rates printed by the command — a jump on any field means the IRS
 renamed an element; fix `ALTERNATES` in `ingest/efile_xml.py`, add
-the old name as a fallback, test, note it. If a batch reports ~100%
-unparseable, it is almost certainly Deflate64 compression (seen on
-2025_TEOS_XML_11B): extract with `unzip` and parse the folder. Concatenate the parsed
-CSVs into one governance file, re-run the report stage with
-`--governance`, and regenerate `diversion_review_<year>.csv` for the
-manual review queue.
+the old name as a fallback, test, note it. If a batch aborts with
+`NotImplementedError: That compression method is not supported` (or
+reports ~100% unparseable), it is Deflate64 compression — seen on
+2025_TEOS_XML_11B and 2025_TEOS_XML_05A: extract with `unzip` and
+parse the folder.
+
+Always reconcile each batch's parsed count against
+`index_<year>.csv` before moving on — a batch can be a perfectly
+valid, fully readable zip and still be missing half its returns
+(2025_TEOS_XML_05A, 2026-08-28: 81,770 of 163,540). "Opens cleanly"
+is not "is complete".
+
+Concatenate the parsed CSVs into one governance file **reading `ein`
+as a string** (`dtype={"ein": "string"}` — otherwise leading zeros
+are stripped and coverage silently drops), re-run the report stage
+with `--governance`, and regenerate `diversion_review_<year>.csv` for
+the manual review queue.
 
 ## 5. Close the loop
 

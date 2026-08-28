@@ -221,6 +221,19 @@ left as written and corrected here rather than edited in place.
   all six: 2019, 2020, 2021, 2022 and 2023 all begin `EF BB BF`;
   **2024 does not**. Harmless — the loader reads `utf-8-sig` — but
   the record was incomplete.
+- **The combined diversion workpaper's 432 does not reproduce.** The
+  2025-round entry above records
+  `outputs/diversion_review_2024-2025.csv` at 432 unique
+  organizations; no command built that file, and the rule was never
+  written down. There is one now — `watchdog990 diversion` — and it
+  reproduces the 2024 workpaper's 327 exactly (including the "minus 3
+  duplicate diversion rows" arithmetic in the 2026-07-30 entry) while
+  yielding **440** on the same seven-batch 2025 base that 432 was
+  measured on, and 560 on today's sixteen-file base. Growth is not
+  the explanation; the restricted rebuild ties to 1,067,727 records
+  exactly. The 432 stands as written above. Rule, the alternatives
+  measured, and the two filters that hit 432 by fabrication rather
+  than by method: `methodology.md`, entry dated 2026-08-28.
 - **2024_TEOS_XML_01A schema versions.** Recorded above as
   "2021v4.0-2023v4.0". Observed on the parsed batch: **2020v1.3 through
   2023v4.0**, ten distinct versions (2020v1.3, 2020v4.0, 2020v4.1,

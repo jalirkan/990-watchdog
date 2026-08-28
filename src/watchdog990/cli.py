@@ -3,6 +3,7 @@
     watchdog990 run --extract data/raw/23eoextract990.csv --label 2023
     watchdog990 run --label 2023            # paths from settings.yaml
     watchdog990 org --ein 142007220         # ProPublica spot lookup
+    watchdog990 diversion --governance outputs/governance_*.csv --label 2025
 
 `run` is fully offline once the IRS files are on disk; `org` needs
 internet (it calls the ProPublica API).
@@ -18,7 +19,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from watchdog990 import flags, metrics, panel, report, trends
+from watchdog990 import diversion, flags, metrics, panel, report, trends
 from watchdog990.ingest import bmf, efile_xml, propublica, soi_extract
 from watchdog990.utils import load_settings
 
@@ -415,6 +416,48 @@ def _cmd_xml(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_diversion(args: argparse.Namespace) -> int:
+    """Build the manual-review workpaper for the material-diversion
+    cohort into outputs/diversion_review_<label>.csv.
+
+    One row per superseded (ein, tax period) that admitted a diversion
+    on Part VI line 5 and filed a Schedule O explanation. The rule and
+    why each leg of it exists is documented in diversion.py; this
+    command exists so the file is regenerated rather than
+    reconstructed from memory at the next refresh."""
+    settings = load_settings(args.config)
+    adm = diversion.load_governance(args.governance)
+    if adm.empty:
+        log.error("No material-diversion admissions in %s", args.governance)
+        return 2
+
+    wp = diversion.build_workpaper(adm)
+    out_dir = Path(settings["output_dir"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = out_dir / f"diversion_review_{args.label}.csv"
+    wp.to_csv(csv_path, index=False)
+
+    # The three counts a refresh should reconcile: what was filed,
+    # what survived the supersede, and how many organizations that is.
+    no_text = int((diversion.explanation_text(adm) == "").sum())
+    if no_text:
+        log.warning(
+            "%s admission(s) carry no Schedule O explanation and are NOT "
+            "in the workpaper — investigate before publishing a count",
+            f"{no_text:,}",
+        )
+    log.info(
+        "Admissions %s -> workpaper %s row(s), %s unique organization(s) "
+        "(%s superseded on (ein, tax_period))",
+        f"{len(adm):,}",
+        f"{len(wp):,}",
+        f"{wp.ein.nunique():,}",
+        f"{len(adm) - no_text - len(wp):,}",
+    )
+    log.info("Wrote %s", csv_path)
+    return 0
+
+
 def _cmd_org(args: argparse.Namespace) -> int:
     data = propublica.get_organization(args.ein)
     org = data.get("organization", {})
@@ -478,6 +521,20 @@ def main(argv: list[str] | None = None) -> int:
     p_xml.add_argument("--label", default="xml", help="Label for output file")
     p_xml.add_argument("--config", default="config/settings.yaml")
     p_xml.set_defaults(fn=_cmd_xml)
+
+    p_div = sub.add_parser(
+        "diversion",
+        help="Build the material-diversion review workpaper from "
+        "parsed governance CSVs",
+    )
+    p_div.add_argument(
+        "--governance", nargs="+", required=True,
+        help="governance_<label>.csv file(s) from `watchdog990 xml`; "
+        "sorted before stacking so the supersede rule is deterministic",
+    )
+    p_div.add_argument("--label", default="review", help="Label for output file")
+    p_div.add_argument("--config", default="config/settings.yaml")
+    p_div.set_defaults(fn=_cmd_diversion)
 
     p_org = sub.add_parser("org", help="Look up one org via ProPublica")
     p_org.add_argument("--ein", required=True)

@@ -149,6 +149,82 @@ flags: a 2% base-rate boolean and a continuous share are better
 review-queue sort keys than binary alarms. Any promotion is its own
 dated proposal.
 
+### The diversion workpaper: rule written down (2026-08-28)
+
+`outputs/diversion_review_2024-2025.csv` is what the Phase 5 review
+protocol reads, and until today no command built it. The runbook said
+"concatenate the governance CSVs"; `data-sources.md` records the
+result — **432 unique organizations, all with Schedule O
+explanations** — without the rule that produced it. A headline figure
+that cannot be regenerated from the repo is a reproducibility hole in
+a project whose whole claim is reproducibility, so the rule is now
+code: `watchdog990 diversion`, with each leg argued in
+`src/watchdog990/diversion.py` and pinned in `tests/test_diversion.py`.
+
+The rule: Form 990 records only (`is_form_990` — Part VI line 5 exists
+on no other form), `material_diversion` True, a non-empty Schedule O
+explanation, then supersede on (ein, tax period) with the last
+occurrence winning, files stacked in sorted order. That is panel.py's
+supersede, applied to the **admissions** rather than to the whole
+governance base.
+
+| Base | Admissions | Rows | Unique orgs | Recorded |
+|---|---:|---:|---:|---|
+| 2024, twelve batches | 330 | 327 | 309 | 327 — reproduces |
+| + the seven 2025 batches 432 was measured on | 508 | 503 | **440** | 432 — does not |
+| + all sixteen 2025 files (today's base) | 675 | 666 | 560 | — |
+
+**The 2024 figure reproduces exactly, and independently.** 330
+admissions minus 3 superseded is the same arithmetic `data-sources.md`
+records from that round — "728,719 index rows minus 3 duplicate
+diversion rows superseded during the Schedule O patch". Two different
+statements, one rule, same three rows. That is good evidence this is
+the rule that built the 2024 workpaper.
+
+**The combined figure does not reproduce, and growth is not the
+reason.** Restricted to exactly the batches on hand when 432 was
+recorded — the same seven 2025 batches, on a base that rebuilds to
+1,067,727 records exactly, matching that entry — the rule yields
+**440**, not 432. The difference is 8 organizations and it is not a
+coverage artifact. Alternatives measured on that same base, none of
+them 432 either:
+
+- **440** — the rule above.
+- **438** — supersede among all Form 990 records *before* filtering to
+  admissions, i.e. a later amended 990 that unchecks the box retracts
+  the admission. Defensible; costs 2 organizations. Rejected because
+  the 2024 workpaper reproduces at 327 only without it (it gives 325),
+  and because an admission is a statement that was filed — the review
+  queue should still see it.
+- **426** — supersede across the whole governance base, admissions and
+  all, which is what "concatenate the CSVs and filter" most naturally
+  does. This one is not merely different, it is wrong: 12 of the 14
+  organizations it loses are evicted by a same-period 990-EZ/PF row
+  whose `material_diversion` is NA *because Part VI line 5 is not on
+  that form*. `test_a_non_990_return_never_supersedes_an_admission`
+  is the regression that would have caught it.
+- 423 (keep-first), 437 (keying on ein + tax period + schema version),
+  415 (restricted to panel organizations), 305 (each organization's
+  latest filing only).
+
+**Two filters do land on 432 and both are fabrications**, recorded
+here so nobody re-derives them and believes them: dropping the 2024
+01A batch, and requiring a Schedule O explanation of at least 61
+characters. Neither has any basis in the method. They are what tuning
+to a number looks like.
+
+Standing position: **432 came from an unrecorded rule.** It stays in
+`data-sources.md` as the historical record of what was measured that
+day; it is not restated, and the new counts are not bent toward it.
+440 is what the written-down rule yields on that day's inputs, 560 on
+today's. What changed is that the next refresh regenerates the file
+with a command instead of reconstructing the rule from memory.
+
+Unresolved and worth saying plainly: the 8-organization gap has no
+explanation. The workpaper CSV from that day is not in the repo
+(`outputs/` is gitignored), so the surviving evidence is the sentence
+in `data-sources.md` and nothing else.
+
 ## Expense-breakdown rules go live via XML (2026-07-30)
 
 The e-filed Part IX carries the functional expense breakdown the

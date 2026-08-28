@@ -96,9 +96,38 @@ is larger, the retrieval genuinely truncated.
 
 Concatenate the parsed CSVs into one governance file **reading `ein`
 as a string** (`dtype={"ein": "string"}` — otherwise leading zeros
-are stripped and coverage silently drops), re-run the report stage
-with `--governance`, and regenerate `diversion_review_<year>.csv` for
-the manual review queue.
+are stripped and coverage silently drops), then re-run the report
+stage with `--governance`.
+
+## 4b. Rebuild the diversion review workpaper
+
+```
+watchdog990 diversion --governance outputs/governance_*.csv --label <years>
+```
+
+Writes `outputs/diversion_review_<years>.csv` — one row per
+(EIN, tax period) that checked Part VI line 5 on a Form 990 and filed
+a Schedule O explanation, superseded on (EIN, tax period) with the
+last file winning. Paths are sorted before stacking, so the output
+does not depend on your shell's glob order. This is the file the
+Phase 5 review protocol reads (`docs/ai-assisted-review.md`); do not
+hand-assemble it. The rule and the argument for each leg of it live
+in `src/watchdog990/diversion.py`.
+
+**Checks:** the command prints admissions -> rows -> unique orgs, and
+all three reconcile: rows = admissions minus superseded minus any
+admission lacking an explanation (it warns when that last number is
+non-zero — a checked box with no Schedule O text is a finding about
+the filing, not a parser bug, but confirm which before publishing a
+count). Compare the org count against the last round's; the cohort
+grows roughly with parsed Form 990s.
+
+Do **not** build this file by deduplicating the whole governance base
+and then filtering to admissions. A same-period 990-EZ/PF row carries
+`material_diversion` NA — Part VI line 5 is not on that form — and
+supersedes a real admission out of the queue; that cost 12
+organizations on the 2024+2025 base. See the 2026-08-28 entry in
+`methodology.md`.
 
 ## 5. Close the loop
 

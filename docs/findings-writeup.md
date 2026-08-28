@@ -92,7 +92,7 @@ returns, and it has held its shape as the parsed base doubled. The
 108 organizations carrying both an admission and financial flags
 sort, on any reasonable weighting, to the very top of the queue.
 Second, flagged organizations carry insider loans at 3.32% (3,632 of
-109,244 covered) against a 2.37% base rate across all 374,903
+the covered organizations) against a 2.37% base rate across all 374,903
 organizations with parsed Form 990 governance — both measured per
 organization on its latest parsed return, so the two rates are
 comparable. The financial screen and the governance signals still
@@ -140,11 +140,14 @@ document first.
 Both of v1.0's extensions have since shipped, and they are what moved
 the numbers above. Coverage: the nine outstanding 2024 XML batches
 and all sixteen 2025 batches are parsed, and governance context now
-reaches 86.8% of flagged organizations against 41.8% in v1.0. (That
-86.8% is 109,244 of 125,833 as the report prints it; the printed
-denominator is the flag set *before* the sector-relative rule is
-added, so measured against the full queue of 127,214 the figure is
-85.9%. Both are given here because the report prints the first.)
+reaches 86.9% of flagged organizations against 41.8% in v1.0 —
+110,512 of 127,214. (Both halves of that fraction were understated
+when this section was first drafted: the report computed them before
+the sector-relative rule had added its flags, printing 109,244 of
+125,833. Correcting only the denominator would have given 85.9%,
+which is further from the truth than the figure it replaced — the two
+omissions very nearly cancelled. Fixed at source; see the coverage
+regression test in tests/test_trends.py.)
 Depth: the functional expense breakdown — the one number the public
 most wants and the extracts least contain — is parsed from Part IX,
 and the two rules it feeds account for the queue's growth.
@@ -186,8 +189,8 @@ tuning log in `methodology.md`. They should not be quoted as current.
 | Panel orgs with a diversion admission | 151 | 288 |
 | — carrying no other flag | 111 | 180 |
 | — carrying financial flags too | 40 | 108 |
-| Insider loans among flagged orgs | 4.45% of 37,209 | 3.32% of 109,244 |
-| Governance coverage of flagged orgs | 41.8% | 86.8% |
+| Insider loans among flagged orgs | 4.45% of 37,209 | 3.32% of 110,512 |
+| Governance coverage of flagged orgs | 41.8% | 86.9% |
 
 **Why the queue grew.** The screening logic did not change; the
 input coverage did. v1.0 was written before the expense-breakdown

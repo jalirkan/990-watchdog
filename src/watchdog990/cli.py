@@ -160,6 +160,8 @@ def _trend_stage_report(settings: dict, args: argparse.Namespace) -> int:
     hits = _read_ckpt("trend_hits.csv")
 
     gov_stats = None
+    gov_frame = None
+    before_cov = 0
     gov_path = getattr(args, "governance", None)
     if gov_path and Path(gov_path).exists():
         gov = pd.read_csv(gov_path, dtype={"ein": "string"})
@@ -224,25 +226,13 @@ def _trend_stage_report(settings: dict, args: argparse.Namespace) -> int:
             hits = pd.concat([hits, gov_hits], ignore_index=True)
         before_cov = hits["ein"].isin(set(gov["ein"])).sum()
         hits = hits.merge(gov, on="ein", how="left")
-        flagged_gov = gov[gov["ein"].isin(set(hits["ein"]))]
-        gov_stats = {
-            "flagged_covered": int(flagged_gov["ein"].nunique()),
-            "flagged_total": int(hits["ein"].nunique()),
-            "diversion": int((flagged_gov.material_diversion == True).sum()),  # noqa: E712
-            "insider_loans": int((flagged_gov.loans_to_insiders == True).sum()),  # noqa: E712
-            "median_independence": float(
-                pd.to_numeric(
-                    flagged_gov.board_independence, errors="coerce"
-                ).median()
-            ),
-            "schedule_l": int((flagged_gov.schedule_l_present == True).sum()),  # noqa: E712
-        }
-        log.info(
-            "Governance join: %s of %s flagged orgs covered (%s hit rows)",
-            f"{gov_stats['flagged_covered']:,}",
-            f"{gov_stats['flagged_total']:,}",
-            f"{before_cov:,}",
-        )
+        # gov_stats is NOT built here. Every field in it is a statement about
+        # the flagged population, and the sector-relative screen below still
+        # has flags to add - computing them now silently excludes whoever it
+        # flags. That was a real defect: the denominator omitted the 1,381
+        # organizations flagged only by SECTOR_OUTLIER_OFFICER_COMP, and the
+        # reported governance coverage read 86.8% where it was 85.9%.
+        gov_frame = gov
 
     names = None
     sector_table = None
@@ -278,6 +268,30 @@ def _trend_stage_report(settings: dict, args: argparse.Namespace) -> int:
                 sector_table = report.sector_rates(pop, flagged)
             if "subsection" in join_cols:
                 subsection_table = report.subsection_rates(pop, flagged)
+
+    # Every flag is in now - the sector-relative screen above was the last
+    # writer of `hits` - so the flagged population is finally settled and the
+    # governance statistics can be taken against it.
+    if gov_frame is not None:
+        flagged_gov = gov_frame[gov_frame["ein"].isin(set(hits["ein"]))]
+        gov_stats = {
+            "flagged_covered": int(flagged_gov["ein"].nunique()),
+            "flagged_total": int(hits["ein"].nunique()),
+            "diversion": int((flagged_gov.material_diversion == True).sum()),  # noqa: E712
+            "insider_loans": int((flagged_gov.loans_to_insiders == True).sum()),  # noqa: E712
+            "median_independence": float(
+                pd.to_numeric(
+                    flagged_gov.board_independence, errors="coerce"
+                ).median()
+            ),
+            "schedule_l": int((flagged_gov.schedule_l_present == True).sum()),  # noqa: E712
+        }
+        log.info(
+            "Governance join: %s of %s flagged orgs covered (%s hit rows)",
+            f"{gov_stats['flagged_covered']:,}",
+            f"{gov_stats['flagged_total']:,}",
+            f"{before_cov:,}",
+        )
 
     label = f"{labels[0]}-{labels[-1]}_trend"
     csv_path, md_path = report.write(

@@ -392,3 +392,124 @@ if __name__ == "__main__":
             fn()
             print(f"PASS {name}")
     print("All tests passed.")
+
+
+def test_governance_coverage_counts_every_flagged_org():
+    """The coverage denominator must be the flagged population, all of it.
+
+    It was not. gov_stats was built immediately after the governance join,
+    while the sector-relative screen still had flags to add, so an org
+    flagged ONLY by SECTOR_OUTLIER_OFFICER_COMP was missing from both the
+    numerator and the denominator. On the real bank that hid 1,381
+    organizations; the printed coverage read 86.8% where it was 86.9%,
+    the two errors very nearly cancelling, which is why it survived
+    review. Checking the reported denominator against the flags file
+    catches any future reordering, whichever flag family lands last.
+    """
+    import os
+    import re
+    import tempfile
+    from pathlib import Path
+
+    from watchdog990 import cli
+
+    hdr = (
+        "EIN,tax_pd,totrevenue,totcntrbgfts,totprgmrevnue,totfuncexpns,"
+        "compnsatncurrofcr,othrsalwages,lessdirfndrsng,totassetsend,"
+        "totliabend,totnetassetend\n"
+    )
+
+    # The sector-relative screen needs a real sector: settings.yaml requires
+    # sector_outlier_min_group (300) computable orgs before it will compute a
+    # cutoff at all. So build one, rather than lowering the threshold to suit
+    # the test - the rule under test is the shipped rule.
+    def row(ein, period, comp):
+        # Healthy on every row-local rule: surplus, program ratio 0.78,
+        # ~13 months of net assets. Only officer comp varies.
+        return f"{ein},{period},1200,0,1200,900,{comp},50,0,1100,100,1000"
+
+    peers = range(2, 322)  # 320 organizations, one sector
+    # org 322 pays 0.50 and so trips the ROW-LOCAL officer-comp rule, which
+    # runs before the sector screen. Without it the fixture would flag nobody
+    # early and the defect would surface as a 0/0 crash rather than as a wrong
+    # number - and it is the wrong number this test exists to pin.
+    years = {
+        "2021": [row(1, 202012, 225), row(322, 202012, 450)]
+                + [row(e, 202012, 18) for e in peers],
+        "2022": [row(1, 202112, 225), row(322, 202112, 450)]
+                + [row(e, 202112, 18) for e in peers],
+    }
+    # org 1 sits at 0.25 officer comp: far above its sector's 95th percentile
+    # (peers are at 0.02) and deliberately BELOW officer_comp_ratio_max (0.30),
+    # so the row-local rule stays silent and the sector rule is its only flag.
+
+    cwd = os.getcwd()
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            os.chdir(d)
+            Path("data/raw").mkdir(parents=True)
+            for yr, rows in years.items():
+                Path(f"data/raw/{yr}.csv").write_text(hdr + "\n".join(rows) + "\n")
+            bmf = ["EIN,NAME,CITY,STATE,NTEE_CD,SUBSECTION"]
+            bmf.append("1,HEAVY PAY ORG,BUFFALO,NY,B25,03")
+            bmf.append("322,VERY HEAVY PAY ORG,SYRACUSE,NY,B25,03")
+            bmf += [f"{e},PEER {e},ALBANY,NY,B25,03" for e in peers]
+            Path("data/raw/bmf.csv").write_text("\n".join(bmf) + "\n")
+            Path("s.yaml").write_text(
+                "extract_files:\n"
+                '  "2021": data/raw/2021.csv\n'
+                '  "2022": data/raw/2022.csv\n'
+                "output_dir: out\n"
+            )
+            # Governance data for the sector-only org, so the bug understated
+            # the numerator as well as the denominator.
+            Path("gov.csv").write_text(
+                "ein,tax_period,material_diversion,loans_to_insiders,"
+                "board_independence,schedule_l_present,is_form_990,"
+                "program_expenses,fundraising_expenses,total_expenses_xml\n"
+                "000000001,202112,False,False,0.9,False,True,800,0,900\n"
+            )
+            assert cli.main(["trend", "--stage", "panel", "--config", "s.yaml"]) == 0
+            assert cli.main(
+                ["trend", "--stage", "names", "--config", "s.yaml",
+                 "--bmf", "data/raw/bmf.csv"]
+            ) == 0
+            assert cli.main(
+                ["trend", "--stage", "report", "--config", "s.yaml",
+                 "--governance", "gov.csv"]
+            ) == 0
+
+            flags_rows = pd.read_csv(
+                "out/flags_2021-2022_trend.csv", dtype={"ein": "string"}
+            )
+            sector = set(
+                flags_rows[
+                    flags_rows.flag_id == "SECTOR_OUTLIER_OFFICER_COMP"
+                ].ein
+            )
+            others = set(
+                flags_rows[
+                    flags_rows.flag_id != "SECTOR_OUTLIER_OFFICER_COMP"
+                ].ein
+            )
+            assert sector - others, (
+                "fixture no longer produces an org flagged only by the "
+                "sector screen; the test cannot measure what it claims to"
+            )
+
+            summary = Path("out/summary_2021-2022_trend.md").read_text()
+            m = re.search(r"Coverage: ([\d,]+) of ([\d,]+) flagged orgs", summary)
+            assert m, "coverage line missing from the summary"
+            covered, total = (int(g.replace(",", "")) for g in m.groups())
+
+            assert total == flags_rows["ein"].nunique(), (
+                "the reported denominator is not the flagged population: "
+                f"summary says {total}, flags file holds "
+                f"{flags_rows['ein'].nunique()}"
+            )
+            assert covered == 1, (
+                "the sector-only org has governance data and must count as "
+                f"covered; summary says {covered}"
+            )
+        finally:
+            os.chdir(cwd)

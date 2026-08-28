@@ -182,6 +182,50 @@ that subset (currently 167,831 orgs, 41.5% of the panel):
   single major gifts are common — so severity remains medium and
   every hit is a question, not an answer.
 
+  Tuning log 2026-08-28 (2025 completion round — all 2024 + all
+  fifteen 2025 batches; governance base 1,343,243 records). Measured,
+  not retuned: **ZERO_FUNDRAISING_COST fires on 9,686 orgs — 3.59% of
+  the with-breakdown population (269,985) and 3.06% of period-matched
+  (316,890)**. Against the 2026-07-30 rebase entry above (4,322 orgs,
+  3.3% of with-breakdown, 1.3% of period-matched) that is **2.24x the
+  recorded count**, which clears the runbook's "a flag doubling or
+  halving is a finding" bar. Both figures stand as measured; neither
+  is restated to match the other.
+
+  The threshold is not what moved. The fire rate on the population
+  the rule actually tests barely shifted (3.3% -> 3.59%), and the
+  neighbouring rule reproduces: LOW_PROGRAM_RATIO measures 38,176
+  here and 38,115 on the pre-round base, against the 38,117 that
+  ground-truth-lab's `docs/MEMO-001-stewardship-arm.md` recorded from
+  the shipped artifact at this same repo SHA (ce9902f) — while that
+  same memo records 4,248 for ZERO_FUNDRAISING_COST. Median program
+  ratio 0.856 against the recorded 0.855. The disagreement is
+  specific to this one flag, so it is not a coverage artifact
+  reaching every rule.
+
+  What moved is the population. The Part VIII contribution breakdown
+  now parses on 85.2% of period-matched rows; the 2026-07-30 entry's
+  own two percentages imply roughly 39% at the time. Because the rule
+  prefers the private basis wherever the breakdown exists, far more
+  orgs are now tested on the sensitive $1M private basis instead of
+  falling back to the $5M total basis — more coverage, same rule,
+  more hits. Read the 2026-07-30 count as "the rule at ~39% breakdown
+  coverage" and this one as "the rule at 85% coverage"; they are not
+  competing measurements of the same quantity.
+
+  Not acted on here, flagged for the owner: `_zero_fundraising_cost`
+  chooses its basis with a column-level test
+  (`if "private_contributions" in df.columns`), while its docstring
+  describes a per-row fallback to the total basis "where the
+  breakdown is absent". Once the column exists, the 46,905
+  period-matched rows with NA private contributions fire on nothing
+  rather than falling back. Measured impact today: **zero** — no
+  additional hit appears if the documented per-row fallback is
+  applied, even though `total_contributions` is populated for all
+  46,905. So this is a docstring-accuracy question, not a live
+  miscount; it would only start to bite if a future parse lost
+  contribution data on orgs above the $5M total floor.
+
 ## Known limitations
 - SOI extracts omit Part IX functional expense columns; program /
   fundraising ratios require period-matched e-file XML (see

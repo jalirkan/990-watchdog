@@ -129,12 +129,93 @@ of flagged orgs; the combined diversion workpaper
 (outputs/diversion_review_2024-2025.csv) holds 432 unique orgs, all
 with Schedule O explanations.
 
-**Gotcha, learned the hard way:** 2025_TEOS_XML_11B ships with
-Deflate64 compression, which Python's zipfile cannot read (every
-member "unparseable"). Fix: extract with Info-ZIP `unzip` (supports
-enhanced deflate) and point the parser at the folder. If a batch
-reports ~100% unparseable, check the compression method before
-suspecting the parser.
+**2025 completion round (2026-08-28):** the remaining eight batches
+parsed (01A, 02A, 03A, 05A, 06A, 07A, 10A, 12A) — all fifteen 2025
+batches now local. 287,140 returns parsed, zero unparseable, 140,668
+Form 990s. Per-batch reconciliation against `index_2025.csv`:
+
+| Batch | Index rows | Parsed | Unparseable | Form 990 |
+|---|---:|---:|---:|---:|
+| 2025_TEOS_XML_01A | 17,044 | 17,044 | 0 | 9,264 |
+| 2025_TEOS_XML_02A | 41,855 | 41,855 | 0 | 21,917 |
+| 2025_TEOS_XML_03A | 41,570 | 41,570 | 0 | 18,701 |
+| 2025_TEOS_XML_05A | 163,540 | 81,770 | 0 | 35,943 |
+| 2025_TEOS_XML_06A | 44,824 | 44,824 | 0 | 22,445 |
+| 2025_TEOS_XML_07A | 24,854 | 24,854 | 0 | 13,419 |
+| 2025_TEOS_XML_10A | 9,836 | 9,836 | 0 | 5,085 |
+| 2025_TEOS_XML_12A | 25,387 | 25,387 | 0 | 13,894 |
+
+Fourteen of fifteen batches tie to the index exactly (the seven from
+the 2026-07-30 round re-verified at 379,996, matching that record).
+
+**Open item — 2025_TEOS_XML_05A is incomplete on disk.** The index
+assigns 163,540 returns to 05A; the zip carries 81,770. The archive
+is structurally valid and every member extracts cleanly, so it does
+not fail any readability check — but sorted by `OBJECT_ID` the files
+present are exactly the first 81,770 of the batch, with a hard cut at
+that position and nothing after it (every file on disk appears in the
+index; no file appears out of order). Its 496 MB against 11B's 495 MB
+for 80,283 returns is consistent with a half-length archive. That is
+the signature of a truncated retrieval, not an IRS split: there is no
+05B in the index. The 81,770 parsed returns are sound and are
+included; re-fetch 05A next round and re-parse to recover the missing
+half. Counts above are stated as observed, not as the index expects.
+
+Per-field NA rates on the eight batches are in line with the 2024
+base — core governance fields (tax_period, material_diversion,
+loans_to_insiders, voting_members, independent_members) 0.00% on
+every batch, board_independence 1.3–2.1%, program/fundraising
+expenses 4.2–6.8%, total_contributions 13.7–15.8%, govt_grants
+61.7–69.5% (the 2024 batches run 62–71% on the same field; the
+element is simply absent when there are no government grants). No
+field moved enough to suspect an element rename.
+
+Unified governance base rebuilt over all 2024 + all fifteen 2025
+batches (`outputs/governance_all.csv`): **1,343,243 records** (from
+1,067,727), 52,612 superseded on (EIN, tax period), 681,580 Form 990
+rows. Governance context now covers **86.6% of flagged orgs**
+(108,940 of 125,847), up from 84.9% (106,817 of 125,749) measured on
+the same code with the pre-round base.
+
+Assembly note, learned by getting it wrong: concatenate the per-batch
+CSVs with `dtype={"ein": "string"}`. Read without it, pandas infers
+`ein` as int64 and silently strips leading zeros; the rebuilt file
+then fails to join for the ~4.5% of orgs whose EIN starts with 0, and
+the symptom is *coverage going down* after adding batches. The check
+that catches it: the unified base must have 9-character EINs on every
+row. Rebuilding the 2026-07-30 base with the correct dtype reproduces
+1,067,727 records and 47,699 leading-zero EINs exactly.
+
+**Gotcha, learned the hard way:** some TEOS batches ship with
+Deflate64 compression, which Python's zipfile cannot read. Confirmed
+on **2025_TEOS_XML_11B and 2025_TEOS_XML_05A** (both entirely
+compression method 9; every other batch on hand is method 8). Fix:
+extract with Info-ZIP `unzip` (supports enhanced deflate) and point
+the parser at the folder. Note the actual symptom with the current
+parser: `_from_zip` catches only `ElementTree.ParseError`, so a
+Deflate64 member raises `NotImplementedError: That compression method
+is not supported` and the command aborts on the first file — it does
+not report "~100% unparseable" as the runbook's wording suggests.
+Either way, check the compression method before suspecting the
+parser.
+
+## Corrections to earlier records (recorded 2026-08-28)
+
+Verified during the completion round; the original entries above are
+left as written and corrected here rather than edited in place.
+
+- **UTF-8 BOM is wider than recorded.** The phase-2 note says the
+  2022 and 2023 extract CSVs carry a BOM. Checked byte-for-byte on
+  all six: 2019, 2020, 2021, 2022 and 2023 all begin `EF BB BF`;
+  **2024 does not**. Harmless — the loader reads `utf-8-sig` — but
+  the record was incomplete.
+- **2024_TEOS_XML_01A schema versions.** Recorded above as
+  "2021v4.0-2023v4.0". Observed on the parsed batch: **2020v1.3 through
+  2023v4.0**, ten distinct versions (2020v1.3, 2020v4.0, 2020v4.1,
+  2020v4.2, 2021v4.0, 2021v4.1, 2021v4.2, 2022v5.0, 2022v7.0,
+  2023v4.0); the bulk is 2022v5.0 (15,369 of 17,246). The recorded
+  floor was two minor versions too high. For contrast, the 2025 01A
+  batch spans 2021v4.0-2024v5.0 across thirteen versions.
 
 Targeted acquisition workflow:
 1. `watchdog990 xml-plan --flags outputs/flags_<label>.csv --index

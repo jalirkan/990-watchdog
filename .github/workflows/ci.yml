@@ -1,0 +1,50 @@
+name: CI
+
+# The screen's credibility rests on measurement, so the measurement
+# should not depend on one person's laptop. This runs the same check
+# the README and the refresh runbook name — `pytest -q`, everything
+# green — on every push and pull request against master.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # pyproject requires >=3.10; the README recommends 3.12 and that
+      # is what the project is developed on.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Dependencies come from pyproject.toml. uv.lock is not tracked,
+      # so there is nothing pinned to install from here.
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      # data/raw is a local symlink to an external mount and does not
+      # exist in a fresh checkout. The suite is synthetic by design;
+      # if a test ever starts reaching for real extracts, this fails.
+      - name: Tests
+        run: pytest -q
+
+      # "no downloads, no network" is a claim every test file makes in
+      # its docstring. Re-run the suite with no network interfaces at
+      # all so the claim is checked rather than trusted. This proves
+      # the tests, not the install above, which of course needs pip.
+      - name: Tests, offline
+        run: |
+          unshare -rn true || {
+            echo "Unprivileged network namespaces unavailable on this runner;"
+            echo "the offline claim cannot be checked here. Fix the runner or"
+            echo "drop this step deliberately — do not let it pass quietly."
+            exit 1
+          }
+          unshare -rn pytest -q

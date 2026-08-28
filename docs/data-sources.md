@@ -139,27 +139,36 @@ Form 990s. Per-batch reconciliation against `index_2025.csv`:
 | 2025_TEOS_XML_01A | 17,044 | 17,044 | 0 | 9,264 |
 | 2025_TEOS_XML_02A | 41,855 | 41,855 | 0 | 21,917 |
 | 2025_TEOS_XML_03A | 41,570 | 41,570 | 0 | 18,701 |
-| 2025_TEOS_XML_05A | 163,540 | 81,770 | 0 | 35,943 |
+| 2025_TEOS_XML_05A | 163,540* | 81,770 | 0 | 35,943 |
+| 2025_TEOS_XML_05B | (same label)* | 81,770 | 0 | 38,476 |
 | 2025_TEOS_XML_06A | 44,824 | 44,824 | 0 | 22,445 |
 | 2025_TEOS_XML_07A | 24,854 | 24,854 | 0 | 13,419 |
 | 2025_TEOS_XML_10A | 9,836 | 9,836 | 0 | 5,085 |
 | 2025_TEOS_XML_12A | 25,387 | 25,387 | 0 | 13,894 |
 
-Fourteen of fifteen batches tie to the index exactly (the seven from
+*Batch 05 is split across two files under one index label — see below.
+All sixteen files tie to the index once 05A and 05B are read together (the seven from
 the 2026-07-30 round re-verified at 379,996, matching that record).
 
-**Open item — 2025_TEOS_XML_05A is incomplete on disk.** The index
-assigns 163,540 returns to 05A; the zip carries 81,770. The archive
-is structurally valid and every member extracts cleanly, so it does
-not fail any readability check — but sorted by `OBJECT_ID` the files
-present are exactly the first 81,770 of the batch, with a hard cut at
-that position and nothing after it (every file on disk appears in the
-index; no file appears out of order). Its 496 MB against 11B's 495 MB
-for 80,283 returns is consistent with a half-length archive. That is
-the signature of a truncated retrieval, not an IRS split: there is no
-05B in the index. The 81,770 parsed returns are sound and are
-included; re-fetch 05A next round and re-parse to recover the missing
-half. Counts above are stated as observed, not as the index expects.
+**Resolved — batch 05 ships as two files under one index label.**
+The index assigns 163,540 returns to `2025_TEOS_XML_05A`, but that zip
+carries 81,770. This looks exactly like a truncated download and is
+not one: the server reports `content-length: 495924982` for 05A, byte
+for byte what is on disk, so re-fetching returns the identical file.
+**`2025_TEOS_XML_05B.zip` exists on the server and is not named
+anywhere in the index** (every one of its returns is labelled
+`2025_TEOS_XML_05A` there). The two partition the batch exactly:
+81,770 members each, zero overlap, and their union reproduces the
+index's 163,540 `OBJECT_ID`s — 05A holds the first half sorted by
+`OBJECT_ID`, 05B the second. Both are Deflate64.
+
+The lesson is a check, not a filename: **an archive that opens
+cleanly is not the same as an archive that is complete.** Every
+integrity test 05A passes — valid central directory, every member
+extracts — and it still held half the batch. Reconcile member counts
+against the index per batch, and when a batch comes up exactly short,
+probe for a `<batch>B` sibling before concluding the retrieval failed.
+No other 2025 batch has one; the remaining fourteen tie to the index.
 
 Per-field NA rates on the eight batches are in line with the 2024
 base — core governance fields (tax_period, material_diversion,
@@ -170,12 +179,14 @@ expenses 4.2–6.8%, total_contributions 13.7–15.8%, govt_grants
 element is simply absent when there are no government grants). No
 field moved enough to suspect an element rename.
 
-Unified governance base rebuilt over all 2024 + all fifteen 2025
-batches (`outputs/governance_all.csv`): **1,343,243 records** (from
-1,067,727), 52,612 superseded on (EIN, tax period), 681,580 Form 990
-rows. Governance context now covers **86.6% of flagged orgs**
-(108,940 of 125,847), up from 84.9% (106,817 of 125,749) measured on
-the same code with the pre-round base.
+Unified governance base rebuilt over all 2024 + all sixteen 2025
+files (`outputs/governance_all.csv`): **1,420,080 records** (from
+1,067,727), 57,545 superseded on (EIN, tax period). Governance
+context now covers **86.8% of flagged orgs** (109,244 of 125,833),
+up from 84.9% (106,817 of 125,749) measured on the same code with the
+pre-round base. The last 0.2pp came from 05B alone, which is the
+practical reason the split above is worth documenting rather than
+filing as a curiosity.
 
 Assembly note, learned by getting it wrong: concatenate the per-batch
 CSVs with `dtype={"ein": "string"}`. Read without it, pandas infers
@@ -188,8 +199,9 @@ row. Rebuilding the 2026-07-30 base with the correct dtype reproduces
 
 **Gotcha, learned the hard way:** some TEOS batches ship with
 Deflate64 compression, which Python's zipfile cannot read. Confirmed
-on **2025_TEOS_XML_11B and 2025_TEOS_XML_05A** (both entirely
-compression method 9; every other batch on hand is method 8). Fix:
+on **2025_TEOS_XML_11B, 2025_TEOS_XML_05A and 2025_TEOS_XML_05B**
+(all entirely compression method 9; every other batch on hand is
+method 8). Fix:
 extract with Info-ZIP `unzip` (supports enhanced deflate) and point
 the parser at the folder. Note the actual symptom with the current
 parser: `_from_zip` catches only `ElementTree.ParseError`, so a

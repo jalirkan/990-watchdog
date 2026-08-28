@@ -183,10 +183,13 @@ that subset (currently 167,831 orgs, 41.5% of the panel):
   every hit is a question, not an answer.
 
   Tuning log 2026-08-28 (2025 completion round — all 2024 + all
-  fifteen 2025 batches; governance base 1,343,243 records). Measured,
-  not retuned: **ZERO_FUNDRAISING_COST fires on 9,686 orgs — 3.59% of
-  the with-breakdown population (269,985) and 3.06% of period-matched
-  (316,890)**. Against the 2026-07-30 rebase entry above (4,322 orgs,
+  sixteen 2025 files, including the 05B half found after the first
+  rebuild; governance base 1,420,080 records). Measured, not retuned:
+  **ZERO_FUNDRAISING_COST fires on 9,683 orgs — 3.59% of the
+  with-breakdown population and 3.06% of period-matched (316,893)**.
+  The figure is stable across three independently built bases this
+  day (9,662 pre-round, 9,686 at fifteen files, 9,683 at sixteen),
+  which is itself evidence the gap is not a coverage artifact. Against the 2026-07-30 rebase entry above (4,322 orgs,
   3.3% of with-breakdown, 1.3% of period-matched) that is **2.24x the
   recorded count**, which clears the runbook's "a flag doubling or
   halving is a finding" bar. Both figures stand as measured; neither

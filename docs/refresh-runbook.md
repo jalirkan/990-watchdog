@@ -77,14 +77,22 @@ renamed an element; fix `ALTERNATES` in `ingest/efile_xml.py`, add
 the old name as a fallback, test, note it. If a batch aborts with
 `NotImplementedError: That compression method is not supported` (or
 reports ~100% unparseable), it is Deflate64 compression — seen on
-2025_TEOS_XML_11B and 2025_TEOS_XML_05A: extract with `unzip` and
-parse the folder.
+2025_TEOS_XML_11B, 05A and 05B: extract with `unzip` and parse the
+folder.
 
 Always reconcile each batch's parsed count against
 `index_<year>.csv` before moving on — a batch can be a perfectly
 valid, fully readable zip and still be missing half its returns
 (2025_TEOS_XML_05A, 2026-08-28: 81,770 of 163,540). "Opens cleanly"
 is not "is complete".
+
+When a batch comes up short, **check for a `<batch>B` sibling on the
+server before assuming the download failed.** 05A was exactly half,
+and the missing half was `2025_TEOS_XML_05B.zip` — a real file the
+index never names, since it labels those returns `05A` too. Confirm
+which it is from `content-length`: if the server's length equals the
+file on disk, the download is complete and the batch is split; if it
+is larger, the retrieval genuinely truncated.
 
 Concatenate the parsed CSVs into one governance file **reading `ein`
 as a string** (`dtype={"ein": "string"}` — otherwise leading zeros

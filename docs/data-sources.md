@@ -182,7 +182,7 @@ field moved enough to suspect an element rename.
 Unified governance base rebuilt over all 2024 + all sixteen 2025
 files (`outputs/governance_all.csv`): **1,420,080 records** (from
 1,067,727), 57,545 superseded on (EIN, tax period). Governance
-context now covers **86.8% of flagged orgs** (109,244 of 125,833),
+context now covers **86.9% of flagged orgs** (110,512 of 127,214),
 up from 84.9% (106,817 of 125,749) measured on the same code with the
 pre-round base. The last 0.2pp came from 05B alone, which is the
 practical reason the split above is worth documenting rather than

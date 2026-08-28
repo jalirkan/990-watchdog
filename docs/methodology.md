@@ -273,7 +273,7 @@ that subset (currently 167,831 orgs, 41.5% of the panel):
 
   The threshold is not what moved. The fire rate on the population
   the rule actually tests barely shifted (3.3% -> 3.59%), and the
-  neighbouring rule reproduces: LOW_PROGRAM_RATIO measures 38,176
+  neighbouring rule reproduces: LOW_PROGRAM_RATIO measures 38,170
   here and 38,115 on the pre-round base, against the 38,117 that
   ground-truth-lab's `docs/MEMO-001-stewardship-arm.md` recorded from
   the shipped artifact at this same repo SHA (ce9902f) — while that

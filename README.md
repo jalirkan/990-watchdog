@@ -68,6 +68,7 @@ src/watchdog990/
   schema.py     canonical fields + IRS column maps (fix names HERE)
   metrics.py    ratio layer
   flags.py      screening rules registry
+  diversion.py  material-diversion review workpaper (phase 5)
   report.py     CSV + markdown outputs, disclaimer built in
 tests/          synthetic-data tests, no network needed
 ```
@@ -88,7 +89,9 @@ tests/          synthetic-data tests, no network needed
   Annual refresh cycle: `docs/refresh-runbook.md`.
 - **Phase 5 (current):** AI-assisted review of the diversion cohort —
   the model proposes, a human disposes, and only the human column can
-  publish. Protocol and controls: `docs/ai-assisted-review.md`.
+  publish. Protocol and controls: `docs/ai-assisted-review.md`. The
+  review queue itself is built by `watchdog990 diversion --governance
+  outputs/governance_*.csv --label <years>`.
 
 ## License
 
